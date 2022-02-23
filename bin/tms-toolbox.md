@@ -10,7 +10,7 @@
 
 ### Commandes
 
-* `tms-toolbox.pl --tms <FILE PATH> [--slabsize <INT>x<INT>] [--storage FILE[:<INT>]|CEPH|S3|SWIFT] [--level <STRING>] [--above <STRING>] [--ratio <INT>] --from <STRING> --to <STRING> [--add] [--help|--usage|--version]`
+* `tms-toolbox.pl --tms <TMS name> [--slabsize <INT>x<INT>] [--storage FILE[:<INT>]|CEPH|S3|SWIFT] [--level <STRING>] [--above <STRING>] [--ratio <INT>] --from <STRING> --to <STRING> [--add] [--help|--usage|--version]`
 
 ### Options
 
@@ -18,7 +18,7 @@
 * `--usage` Affiche le lien vers la documentation utilisateur de l'outil et quitte
 * `--version` Affiche la version de l'outil et quitte
 * `--add` Si un fichier est en sortie, précise que l'on souhaite écrire à la suite du fichier s'il existe
-* `--tms <file path>` TMS à utiliser
+* `--tms <file path>` nom du TMS à utiliser
 * `--level <string>` Niveau du TMS à considérer
 * `--above <string>` Niveau du TMS jusqu'auquel travailler (uniquement pour les QTree)
 * `--storage FILE[:<integer>]|CEPH|S3|SWIFT` Stockage, type et éventuellement profondeur d'arborescence. `FILE:2` par défaut.
