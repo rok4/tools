@@ -21,11 +21,6 @@ if (! defined $pyramid) {
 
 INFO("Pyramid's type : ".ref ($pyramid));
 
-if (! $pyramid->bindTileMatrixSet("../../../config/tileMatrixSet")) {
-    ERROR("Can not bind the TMS to the pyramid");
-    exit(1);
-}
-
 $pyramid->writeDescriptor();
 
 exit(0);

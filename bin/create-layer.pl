@@ -98,7 +98,6 @@ Contains create-layer call options :
     usage - To obtain the command's usage
     
     pyramid - To precise the pyramid's descriptor path
-    tmsdir - To precise the TMS directory
     title - To precise the layer's title (optionnal)
     abstract - To precise the layer's abstract (optionnal)
 =cut
@@ -184,7 +183,6 @@ sub init {
         },
         
         "pyramid=s" => \$options{pyramid},
-        "tmsdir=s" => \$options{tmsdir},
         "title=s" => \$options{title},
         "abstract=s" => \$options{abstract}
     ) or do {
@@ -205,20 +203,6 @@ sub init {
         ERROR("Option 'pyramid' not defined !");
         return FALSE;
     }
-    
-    ############# tms directory
-    if (! defined $options{"tmsdir"} || $options{"tmsdir"} eq "") {
-        ERROR("Option 'tmsdir' not defined !");
-        return FALSE;
-    }
-
-    my $tmsDir = File::Spec->rel2abs($options{"tmsdir"});
-
-    if (! -d $tmsDir) {
-        ERROR("TMS directory does not exist : $tmsDir");
-        return FALSE;
-    }
-    $options{"tmsdir"} = $tmsDir;
 
     ############# title
     if (! defined $options{"title"} || $options{"title"} eq "") {
@@ -272,11 +256,6 @@ sub doIt {
 
     INFO("Pyramid's type : ".ref ($pyramid));
 
-    if (! $pyramid->bindTileMatrixSet($options{"tmsdir"})) {
-        ERROR("Can not bind the TMS to the pyramid");
-        return FALSE;
-    }
-
     my $layer_json_object = {
         title => $options{title},
         abstract => $options{abstract},
@@ -285,7 +264,6 @@ sub doIt {
             authorized => JSON::true
         }
     };
-
 
     if (ref ($pyramid) eq "ROK4::Core::PyramidRaster") { 
         
@@ -360,11 +338,7 @@ Group: Command's options
 
     --version - Display the tool version.
 
-    --pyr - Pyramid's descriptor file, defining data used by the layer. Mandatory.
-
-    --tmsdir - TMS directory. Mandatory.
-
-    --layerdir - Optionnal, directory where to write the XML .lay file. Written where the command is executed by default.
+    --pyramid - Pyramid's descriptor file, defining data used by the layer. Mandatory.
 
     --resampling - Optionnal, interpolation kernel used by ROK4 to resample images. lanczos_4 by default.
     
