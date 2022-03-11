@@ -393,7 +393,7 @@ sub doIt {
                         $next = $progress->update($done);
                     }
 
-                    my $slabPath = sprintf "%s/%s", $parts->{root}, $parts->{name};
+                    my $slabPath = $parts->{origin};
                     if (exists $stats->{global}->{$type}->{slabs}) {
                         $stats->{global}->{$type}->{slabs}->{number}++;
                         $stats->{levels}->{$level}->{$type}->{slabs}->{number}++;
