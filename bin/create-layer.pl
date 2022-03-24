@@ -224,22 +224,7 @@ sub init {
 =begin nd
 Function: doIt
 
-We extract all needed informations from the pyramid's descriptor, and print them to stdout with XML format.
-
-Example:
-
-| <?xml version="1.0" encoding="UTF-8"?>
-| <layer>
-|     <title>Titre de la couche</title>
-|     <abstract>Résumé de la couche</abstract>
-|     <keywordList>
-|         <keyword>kw1</keyword>
-|         <keyword>kw2</keyword>
-|     </keywordList>
-|     <style>normal</style>
-|     <resampling>lanczos_4</resampling>
-|     <pyramid top-level="3" bottom-level="5">/data/tsatabin/PYRAMIDS/SCAN1000.pyr</pyramid>
-| </layer>
+We extract all needed informations from the pyramid's descriptor
 
 Use classes :
     - <ROK4::Core::ProxyPyramid>
@@ -259,7 +244,7 @@ sub doIt {
     my $layer_json_object = {
         title => $options{title},
         abstract => $options{abstract},
-        keywords => [$pyramid->getTileMatrixSet()->getName(), $pyramid->getType()],
+        keywords => [$pyramid->getTileMatrixSet()->getName(), $pyramid->getFormatCode()],
         tms => {
             authorized => JSON::true
         }
@@ -267,7 +252,7 @@ sub doIt {
 
     if (ref ($pyramid) eq "ROK4::Core::PyramidRaster") { 
         
-        my $interpolation = $pyramid->getImageSpec()->getInterpolation();
+        my $interpolation = $pyramid->getInterpolation();
         if ($interpolation eq "lanczos") {
             $layer_json_object->{resampling} = "${interpolation}_2";
         } else {
@@ -295,15 +280,15 @@ sub doIt {
         $layer_json_object->{pyramids}->[0]->{path} = $pyramid->getDescriptorPath();
     }
     elsif ($storageType eq "S3") {
-        $layer_json_object->{pyramids}->[0]->{path} = $pyramid->getName() + ".json";
+        $layer_json_object->{pyramids}->[0]->{path} = $pyramid->getName() . ".json";
         $layer_json_object->{pyramids}->[0]->{bucket_name} = $pyramid->getDataBucket();
     }
     elsif ($storageType eq "SWIFT") {
-        $layer_json_object->{pyramids}->[0]->{path} = $pyramid->getName() + ".json";
+        $layer_json_object->{pyramids}->[0]->{path} = $pyramid->getName() . ".json";
         $layer_json_object->{pyramids}->[0]->{container_name} = $pyramid->getDataContainer();
     }
     elsif ($storageType eq "CEPH") {
-        $layer_json_object->{pyramids}->[0]->{path} = $pyramid->getName() + ".json";
+        $layer_json_object->{pyramids}->[0]->{path} = $pyramid->getName() . ".json";
         $layer_json_object->{pyramids}->[0]->{pool_name} = $pyramid->getDataPool();
     }
 

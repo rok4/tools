@@ -60,7 +60,7 @@ use lib "$Bin/../lib/perl5";
 
 # My module
 use ROK4::Core::TileMatrixSet;
-use ROK4::Core::CheckUtils;
+use ROK4::Core::Utils;
 use ROK4::Core::Base36;
 use ROK4::Core::ProxyGDAL;
 
@@ -179,7 +179,7 @@ sub parseFromTo {
 
         elsif ($parsed->{type} eq "BBOX") {
             if (defined $value) {
-                if (! ROK4::Core::CheckUtils::isBbox($value)) {
+                if (! ROK4::Core::Utils::isBbox($value)) {
                     ERROR("Value have to respect format BBOX:<XMIN>,<YMIN>,<XMAX>,<YMAX>");
                     return undef;
                 }
@@ -255,7 +255,7 @@ sub parseFromTo {
                 $parsed->{x} = $1;
                 $parsed->{y} = $2;
 
-                if (! ROK4::Core::CheckUtils::isNumber($parsed->{x}) || ! ROK4::Core::CheckUtils::isNumber($parsed->{y})) {
+                if (! ROK4::Core::Utils::isNumber($parsed->{x}) || ! ROK4::Core::Utils::isNumber($parsed->{y})) {
                     ERROR("Value have to respect format POINT:<FLOAT>,<FLOAT>");
                     return undef;
                 }
@@ -283,7 +283,7 @@ sub parseFromTo {
                 $parsed->{col} = $1;
                 $parsed->{row} = $2;
 
-                if (! ROK4::Core::CheckUtils::isPositiveInt($parsed->{col}) || ! ROK4::Core::CheckUtils::isPositiveInt($parsed->{row})) {
+                if (! ROK4::Core::Utils::isPositiveInt($parsed->{col}) || ! ROK4::Core::Utils::isPositiveInt($parsed->{row})) {
                     ERROR("Value have to respect format SLAB_INDICES:<COL INTEGER>,<ROW INTEGER>");
                     return undef;
                 }
@@ -363,7 +363,7 @@ sub parseFromTo {
                 $parsed->{col} = $1;
                 $parsed->{row} = $2;
 
-                if (! ROK4::Core::CheckUtils::isPositiveInt($parsed->{col}) || ! ROK4::Core::CheckUtils::isPositiveInt($parsed->{row})) {
+                if (! ROK4::Core::Utils::isPositiveInt($parsed->{col}) || ! ROK4::Core::Utils::isPositiveInt($parsed->{row})) {
                     ERROR("Value have to respect format TILE_INDICES:<COL INTEGER>,<ROW INTEGER>");
                     return undef;
                 }
@@ -510,7 +510,7 @@ sub init {
                 ERROR("Option 'storage' have to respect format FILE[:<DEPTH>]|CEPH|S3|SWIFT");
                 return FALSE;
             }
-            if (! ROK4::Core::CheckUtils::isStrictPositiveInt($params[1])) {
+            if (! ROK4::Core::Utils::isStrictPositiveInt($params[1])) {
                 ERROR("Option 'storage' have to respect format FILE[:<DEPTH INTEGER>]|CEPH|S3|SWIFT");
                 return FALSE;
             }
@@ -537,7 +537,7 @@ sub init {
 
     ############# ratio
     if (defined $options{"ratio"} && $options{"ratio"} ne "") {
-        if (! ROK4::Core::CheckUtils::isStrictPositiveInt($options{"ratio"})) {
+        if (! ROK4::Core::Utils::isStrictPositiveInt($options{"ratio"})) {
             ERROR("Option 'ratio' have to be a not null positive integer");
             return FALSE;
         }
@@ -831,7 +831,7 @@ sub doIt {
             }
 
             $line =~ s/\s//g;
-            if (! ROK4::Core::CheckUtils::isBbox($line)) {
+            if (! ROK4::Core::Utils::isBbox($line)) {
                 WARN("Line $. : '$line' is not a bbox");
                 next;
             }
