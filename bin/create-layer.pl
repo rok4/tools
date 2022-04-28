@@ -43,7 +43,7 @@ Section: CREATE-LAYER tool
 
 Synopsis:
     (start code)
-    perl create-layer.pl --pyramid=<file> --tmsdir=<directory> [--title=<string>] [--abstract=<string>]
+    perl create-layer.pl --pyramid=<file> [--title=<string>] [--abstract=<string>]
     (end code)
 
 Debug tool allowing to write a default layer descriptor to the standard output, from a pyramid descriptor.
@@ -109,7 +109,6 @@ my %options =
 
 # Mandatory
     "pyramid"  => undef,
-    "tmsdir" => undef,
 
 # Optionnal
     "title" => undef,

@@ -48,7 +48,6 @@ use strict;
 use POSIX qw(locale_h);
 
 # Module
-use Log::Log4perl qw(:easy);
 use Getopt::Long;
 use File::Basename;
 use Cwd;
@@ -93,8 +92,8 @@ my %options =
     "storage" => undef,
     "slabsize" => undef,
     "level" => undef,
-    "add" => undef,
-    "above" => undef
+    "above" => undef,
+    "progress" => undef
 );
 
 ################################################################################
@@ -112,25 +111,17 @@ See Also:
     <init>, <doIt>
 =cut
 sub main {
-    printf("TMS-TOOLBOX : version [%s]\n",$VERSION);
-
-    print STDOUT "BEGIN\n";
 
     # initialization
-    ALWAYS("> Initialization");
     if (! main::init()) {
-        print STDERR "ERROR INITIALIZATION !\n";
         exit 1;
     }
 
     # execution
-    ALWAYS("> Execution");
     if (! main::doIt()) {
-        print STDERR "ERROR EXECUTION !\n";
         exit 5;
     }
 
-    print STDOUT "END\n";
 }
 
 =begin nd
@@ -143,19 +134,20 @@ my %intputs_outputs = (
     BBOXES_LIST => 1,
     GEOM_FILE => 1,
     GEOM => 1,
-    GETMAP_PARAMS_LIST => 1,
-    GETTILE_PARAMS_LIST => 1,
+    GETMAP_PARAMS => 1,
+    GETTILE_PARAMS => 1,
     POINT => 1,
     PYRAMID_LIST => 1,
+    SLAB_INDICE => 1,
     SLAB_INDICES => 1,
     SLAB_INDICES_LIST => 1,
     SLAB_INFO => 1,
     SLAB_PATH => 1,
-    SLAB_PATHS_LIST => 1,
+    SLAB_PATHS => 1,
     SLABS_COUNT => 1,
     SQL_FILE => 1,
     TFW_FILE => 1,
-    TILE_INDICES => 1,
+    TILE_INDICE => 1,
     TILE_INFO => 1
 );
 
@@ -171,7 +163,7 @@ sub parseFromTo {
         my $value = $3;
 
         if (! exists $intputs_outputs{$parsed->{type}}) {
-            ERROR(sprintf "Unknown type '%s'", $parsed->{type});
+            printf STDERR "Unknown type '%s'\n", $parsed->{type};
             return undef;
         }
 
@@ -180,13 +172,13 @@ sub parseFromTo {
         elsif ($parsed->{type} eq "BBOX") {
             if (defined $value) {
                 if (! ROK4::Core::Utils::isBbox($value)) {
-                    ERROR("Value have to respect format BBOX:<XMIN>,<YMIN>,<XMAX>,<YMAX>");
+                    print STDERR "Value have to respect format BBOX:<XMIN>,<YMIN>,<XMAX>,<YMAX>\n";
                     return undef;
                 }
                 my @bb = split(/,/,$value);
                 $parsed->{bbox} = \@bb;
             } else {
-                ERROR("Value have to respect format BBOX:<XMIN>,<YMIN>,<XMAX>,<YMAX>");
+                print STDERR "Value have to respect format BBOX:<XMIN>,<YMIN>,<XMAX>,<YMAX>\n";
                 return undef;
             }
         }
@@ -195,7 +187,7 @@ sub parseFromTo {
 
         elsif ($parsed->{type} eq "BBOXES_LIST") {
             if (! defined $value) {
-                ERROR("Value have to respect format BBOXES_LIST:<FILE PATH>");
+                print STDERR "Value have to respect format BBOXES_LIST:<FILE PATH>\n";
                 return undef;                
             }
 
@@ -207,45 +199,38 @@ sub parseFromTo {
         elsif ($parsed->{type} eq "GEOM_FILE") {
 
             if (! defined $value) {
-                ERROR("Value have to respect format GEOM_FILE:<FILE PATH>");
+                print STDERR "Value have to respect format GEOM_FILE:<FILE PATH>\n";
                 return undef;                
             }
 
             $parsed->{path} = $value;
-            $parsed->{noadd} = 1;
         }
 
         #################### GEOM
 
         elsif ($parsed->{type} eq "GEOM") {
             if (defined $value) {
-                ERROR("Value have to respect format GEOM");
+                print STDERR "Value have to respect format GEOM\n";
                 return undef;                
             } 
         }
 
-        #################### GETMAP_PARAMS_LIST
+        #################### GETMAP_PARAMS
 
-        elsif ($parsed->{type} eq "GETMAP_PARAMS_LIST") {
-
-            if (! defined $value) {
-                ERROR("Value have to respect format GETMAP_PARAMS_LIST:<FILE PATH>");
+        elsif ($parsed->{type} eq "GETMAP_PARAMS") {
+            if (defined $value) {
+                print STDERR "Value have to respect format GETMAP_PARAMS\n";
                 return undef;                
-            }
-
-            $parsed->{path} = $value;
+            } 
         }
 
-        #################### GETTILE_PARAMS_LIST
+        #################### GETTILE_PARAMS
 
-        elsif ($parsed->{type} eq "GETTILE_PARAMS_LIST") {
-
-            if (! defined $value) {
-                ERROR("Value have to respect format GETTILE_PARAMS_LIST:<FILE PATH>");
+        elsif ($parsed->{type} eq "GETTILE_PARAMS") {
+            if (defined $value) {
+                print STDERR "Value have to respect format GETTILE_PARAMS\n";
                 return undef;                
-            }
-
-            $parsed->{path} = $value;
+            } 
         }
 
         #################### POINT
@@ -256,11 +241,11 @@ sub parseFromTo {
                 $parsed->{y} = $2;
 
                 if (! ROK4::Core::Utils::isNumber($parsed->{x}) || ! ROK4::Core::Utils::isNumber($parsed->{y})) {
-                    ERROR("Value have to respect format POINT:<FLOAT>,<FLOAT>");
+                    print STDERR "Value have to respect format POINT:<FLOAT>,<FLOAT>\n";
                     return undef;
                 }
             } else {
-                ERROR("Value have to respect format POINT:<FLOAT>,<FLOAT>");
+                print STDERR "Value have to respect format POINT:<FLOAT>,<FLOAT>\n";
                 return undef;
             }
         }
@@ -269,35 +254,44 @@ sub parseFromTo {
 
         elsif ($parsed->{type} eq "PYRAMID_LIST") {
             if (! defined $value) {
-                ERROR("Value have to respect format PYRAMID_LIST:<FILE PATH>");
+                print STDERR "Value have to respect format PYRAMID_LIST:<FILE PATH>\n";
                 return undef;                
             }
 
             $parsed->{path} = $value;
         }
 
-        #################### SLAB_INDICES
+        #################### SLAB_INDICE
 
-        elsif ($parsed->{type} eq "SLAB_INDICES") {
+        elsif ($parsed->{type} eq "SLAB_INDICE") {
             if (defined $value && $value =~ m/([^,]+),(\S+)/) {
                 $parsed->{col} = $1;
                 $parsed->{row} = $2;
 
                 if (! ROK4::Core::Utils::isPositiveInt($parsed->{col}) || ! ROK4::Core::Utils::isPositiveInt($parsed->{row})) {
-                    ERROR("Value have to respect format SLAB_INDICES:<COL INTEGER>,<ROW INTEGER>");
+                    print STDERR "Value have to respect format SLAB_INDICE:<COL INTEGER>,<ROW INTEGER>\n";
                     return undef;
                 }
             } else {
-                ERROR("Value have to respect format SLAB_INDICES:<COL INTEGER>,<ROW INTEGER>");
+                print STDERR "Value have to respect format SLAB_INDICE:<COL INTEGER>,<ROW INTEGER>\n";
                 return undef;
             }
+        }
+
+        #################### SLAB_INDICES
+
+        elsif ($parsed->{type} eq "SLAB_INDICES") {
+            if (defined $value) {
+                print STDERR "Value have to respect format SLAB_INDICES\n";
+                return undef;                
+            } 
         }
 
         #################### SLAB_INDICES_LIST
 
         elsif ($parsed->{type} eq "SLAB_INDICES_LIST") {
             if (! defined $value) {
-                ERROR("Value have to respect format SLAB_INDICES_LIST:<FILE PATH>");
+                print STDERR "Value have to respect format SLAB_INDICES_LIST:<FILE PATH>\n";
                 return undef;                
             }
 
@@ -308,7 +302,7 @@ sub parseFromTo {
 
         elsif ($parsed->{type} eq "SLAB_INFO") {
             if (defined $value) {
-                ERROR("Value have to respect format SLAB_INFO");
+                print STDERR "Value have to respect format SLAB_INFO\n";
                 return undef;                
             }
         }
@@ -317,29 +311,27 @@ sub parseFromTo {
 
         elsif ($parsed->{type} eq "SLAB_PATH") {
             if (! defined $value) {
-                ERROR("Value have to respect format SLAB_PATH:<FILE PATH>");
+                print STDERR "Value have to respect format SLAB_PATH:<FILE PATH>\n";
                 return undef;                
             }
 
             $parsed->{slab_path} = $value;
         }
 
-        #################### SLAB_PATHS_LIST
+        #################### SLAB_PATHS
 
-        elsif ($parsed->{type} eq "SLAB_PATHS_LIST") {
-            if (! defined $value) {
-                ERROR("Value have to respect format SLAB_PATHS_LIST:<FILE PATH>");
+        elsif ($parsed->{type} eq "SLAB_PATHS") {
+            if (defined $value) {
+                print STDERR "Value have to respect format SLAB_PATHS\n";
                 return undef;                
             }
-
-            $parsed->{path} = $value;
         }
 
         #################### SLABS_COUNT
 
         elsif ($parsed->{type} eq "SLABS_COUNT") {
             if (defined $value) {
-                ERROR("Value have to respect format SLABS_COUNT");
+                print STDERR "Value have to respect format SLABS_COUNT\n";
                 return undef;                
             }
         }
@@ -349,26 +341,26 @@ sub parseFromTo {
         elsif ($parsed->{type} eq "SQL_FILE") {
 
             if (! defined $value) {
-                ERROR("Value have to respect format SQL_FILE:<FILE PATH>");
+                print STDERR "Value have to respect format SQL_FILE:<FILE PATH>\n";
                 return undef;                
             }
 
             $parsed->{path} = $value;
         }
 
-        #################### TILE_INDICES
+        #################### TILE_INDICE
 
-        elsif ($parsed->{type} eq "TILE_INDICES") {
+        elsif ($parsed->{type} eq "TILE_INDICE") {
             if (defined $value && $value =~ m/([^,]+),(\S+)/) {
                 $parsed->{col} = $1;
                 $parsed->{row} = $2;
 
                 if (! ROK4::Core::Utils::isPositiveInt($parsed->{col}) || ! ROK4::Core::Utils::isPositiveInt($parsed->{row})) {
-                    ERROR("Value have to respect format TILE_INDICES:<COL INTEGER>,<ROW INTEGER>");
+                    print STDERR "Value have to respect format TILE_INDICE:<COL INTEGER>,<ROW INTEGER>\n";
                     return undef;
                 }
             } else {
-                ERROR("Value have to respect format TILE_INDICES:<COL INTEGER>,<ROW INTEGER>");
+                print STDERR "Value have to respect format TILE_INDICE:<COL INTEGER>,<ROW INTEGER>\n";
                 return undef;
             }
         }
@@ -377,7 +369,7 @@ sub parseFromTo {
 
         elsif ($parsed->{type} eq "TILE_INFO") {
             if (defined $value) {
-                ERROR("Value have to respect format TILE_INFO");
+                print STDERR "Value have to respect format TILE_INFO\n";
                 return undef;                
             }            
         }
@@ -387,17 +379,16 @@ sub parseFromTo {
         elsif ($parsed->{type} eq "TFW_FILE") {
 
             if (! defined $value) {
-                ERROR("Value have to respect format TFW_FILE:<FILE PATH>");
+                print STDERR "Value have to respect format TFW_FILE:<FILE PATH>\n";
                 return undef;                
             }
 
             $parsed->{path} = $value;
-            $parsed->{noadd} = 1;
         }
     }
 
     else {
-        ERROR("Cannot determine type");
+        print STDERR "Cannot determine type\n";
         return undef;
     }
 
@@ -424,52 +415,36 @@ sub init {
 
     # init Options
     GetOptions(
-        "help|h" => sub {
-            printf "Help\n" ;
-            exit 0;
-        },
-        "version|v" => sub { exit 0; },
-        "usage" => sub {
-            printf "Help\n" ;
-            exit 0;
-        },
-        
+        "version|v" => sub { print "$VERSION\n"; exit 0; },
         "tms=s" => \$options{tms},
         "slabsize=s" => \$options{slabsize},
         "storage=s" => \$options{storage},
-        "add" => \$options{add},
         "above=s" => \$options{above},
         "level=s" => \$options{level},
         "ratio=s" => \$options{ratio},
         "from=s" => \$options{from},
-        "to=s" => \$options{to}
+        "to=s" => \$options{to},
+        "progress" => \$options{progress}
     ) or do {
-        printf "Unappropriate usage\n";
-        printf "Help\n";
+        printf STDERR "Unappropriate usage\n";
         exit -1;
     };
-    
-    # logger by default at runtime
-    Log::Log4perl->easy_init({
-        level => $INFO,
-        layout => '%5p : %m (%M) %n'
-    });
 
     ############# tms
     if (! defined $options{"tms"} || $options{"tms"} eq "") {
-        ERROR("Option 'tms' not defined !");
+        print STDERR "Option 'tms' not defined !\n";
         return FALSE;
     }
 
     my $tms = ROK4::Core::TileMatrixSet->new($options{"tms"}, TRUE);
     if (! defined $tms) {
-        ERROR("Cannot create a TileMatrixSet object from the file ".$options{"tms"});
+        printf STDERR "Cannot create a TileMatrixSet object from the file %s\n", $options{"tms"};
         return FALSE;
     }
     $options{"tms"} = $tms;
 
     if (defined $options{"above"} && $options{"above"} ne "" && ! $tms->isQTree()) {
-        ERROR("Option 'above' only works for QTREE TMS");
+        print STDERR "Option 'above' only works for QTREE TMS\n";
         return FALSE;
     }
 
@@ -478,11 +453,20 @@ sub init {
         if ($options{"slabsize"} =~ m/^(\d+)x(\d+)$/) {
             $options{"slabsize"} = [$1, $2];
         } else {
-            ERROR("Option 'slabsize' have to respect format <integer>x<integer>");
+            print STDERR "Option 'slabsize' have to respect format <integer>x<integer>\n";
             return FALSE;
         }
     } else {
         $options{"slabsize"} = undef;
+    }
+
+    ############# progress
+    if ($options{"progress"}) {
+        $options{"progress"} = {
+            "bar" => undef,
+            "complete" => undef,
+            "next" => 0
+        }
     }
 
     ############# storage
@@ -497,7 +481,7 @@ sub init {
 
         if (scalar(@params) == 1) {
             if ($params[0] ne "FILE" && $params[0] ne "CEPH" && $params[0] ne "S3" && $params[0] ne "SWIFT") {
-                ERROR("Option 'storage' have to respect format FILE[:<DEPTH>]|CEPH|S3|SWIFT");
+                print STDERR "Option 'storage' have to respect format FILE[:<DEPTH>]|CEPH|S3|SWIFT\n";
                 return FALSE;
             }
             if ($params[0] eq "CEPH" || $params[0] eq "S3" || $params[0] eq "SWIFT") {
@@ -507,17 +491,17 @@ sub init {
         }
         elsif (scalar(@params) == 2) {
             if ($params[0] ne "FILE") {
-                ERROR("Option 'storage' have to respect format FILE[:<DEPTH>]|CEPH|S3|SWIFT");
+                print STDERR "Option 'storage' have to respect format FILE[:<DEPTH>]|CEPH|S3|SWIFT\n";
                 return FALSE;
             }
             if (! ROK4::Core::Utils::isStrictPositiveInt($params[1])) {
-                ERROR("Option 'storage' have to respect format FILE[:<DEPTH INTEGER>]|CEPH|S3|SWIFT");
+                print STDERR "Option 'storage' have to respect format FILE[:<DEPTH INTEGER>]|CEPH|S3|SWIFT\n";
                 return FALSE;
             }
             $storage->{depth} = $params[1];
         }
         else {
-            ERROR("Option 'storage' have to respect format FILE[:<DEPTH>]|CEPH|S3|SWIFT");
+            print STDERR "Option 'storage' have to respect format FILE[:<DEPTH>]|CEPH|S3|SWIFT\n";
             return FALSE;
         }
     }
@@ -526,7 +510,7 @@ sub init {
     ############# level
     if (defined $options{"level"} && $options{"level"} ne "") {
         if (! defined $options{tms}->getTileMatrix($options{"level"})) {
-            ERROR(sprintf "Level %s does not exist in the provided TMS", $options{"level"});
+            printf STDERR "Level %s does not exist in the provided TMS", $options{"level"};
             return FALSE;
         } else {
             $options{"level"} = $options{tms}->getTileMatrix($options{"level"});
@@ -538,7 +522,7 @@ sub init {
     ############# ratio
     if (defined $options{"ratio"} && $options{"ratio"} ne "") {
         if (! ROK4::Core::Utils::isStrictPositiveInt($options{"ratio"})) {
-            ERROR("Option 'ratio' have to be a not null positive integer");
+            print STDERR "Option 'ratio' have to be a not null positive integer\n";
             return FALSE;
         }
     } else {
@@ -547,25 +531,25 @@ sub init {
 
     ############# from
     if (! defined $options{from} || $options{from} eq "") {
-        ERROR("Option 'from' not defined !");
+        print STDERR "Option 'from' not defined !\n";
         return FALSE;
     }
 
     $options{from} = parseFromTo($options{from});
     if (! defined $options{from}) {
-        ERROR("Cannot parse 'from' string");
+        print STDERR "Cannot parse 'from' string\n";
         return FALSE;
     }
 
     if (exists $options{from}->{path} && ! -e $options{from}->{path}) {
-        ERROR(sprintf "Input file %s must exist", $options{from}->{path});
+        printf STDERR "Input file %s must exist\n", $options{from}->{path};
         return FALSE;
     }
 
     if ($options{from}->{type} eq "GEOM_FILE") {
         my $geom = ROK4::Core::ProxyGDAL::geometryFromFile($options{from}->{path});
         if (! defined $geom) {
-            ERROR("Cannot load geometry from file");
+            print STDERR "Cannot load geometry from file\n";
             return FALSE;
         }
         $options{from}->{geom} = $geom;
@@ -573,23 +557,18 @@ sub init {
 
     ############# to
     if (! defined $options{to} || $options{to} eq "") {
-        ERROR("Option 'to' not defined !");
+        print STDERR "Option 'to' not defined !\n";
         return FALSE;
     }
 
     $options{to} = parseFromTo($options{to});
     if (! defined $options{to}) {
-        ERROR("Cannot parse 'to' string");
+        print STDERR "Cannot parse 'to' string\n";
         return FALSE;
     }
 
-    if (exists $options{to}->{path} && $options{add} && exists $options{to}->{noadd}) {
-        ERROR(sprintf "Option --add is not authorized for ", $options{to}->{type});
-        return FALSE;
-    }
-
-    if (exists $options{to}->{path} && ! $options{add} && -e $options{to}->{path}) {
-        ERROR(sprintf "Output file %s have not to exist, we don't override if no option --add", $options{to}->{path});
+    if (exists $options{to}->{path} && -e $options{from}->{path}) {
+        printf STDERR "Output file %s must not exist\n", $options{to}->{path};
         return FALSE;
     }
 
@@ -606,24 +585,25 @@ Variable: conversions
 Hash reference containing all available conversions and mandatory options
 =cut
 my $conversions = {
-                 BBOX => { GETTILE_PARAMS_LIST => ["level","slabsize"] ,
-                           SLAB_INDICES_LIST   => ["level","slabsize"] ,
+                 BBOX => { GETTILE_PARAMS      => ["level","slabsize"] ,
+                           SLAB_INDICES        => ["level","slabsize"] ,
                            SQL_FILE            => ["level","slabsize"] },
-          BBOXES_LIST => { SLAB_INDICES_LIST   => ["level","slabsize"] },
-            GEOM_FILE => { GETTILE_PARAMS_LIST => ["level","slabsize"] ,
-                           SLAB_INDICES_LIST   => ["level","slabsize"] ,
+          BBOXES_LIST => { SLAB_INDICES        => ["level","slabsize"] },
+            GEOM_FILE => { GETTILE_PARAMS      => ["level","slabsize"] ,
+                           SLAB_INDICES        => ["level","slabsize"] ,
                            SLABS_COUNT         => ["level","slabsize"] ,
                            SQL_FILE            => ["level","slabsize"] },
                 POINT => { SLAB_INFO           => ["slabsize"],
                            TILE_INFO           => [] },
          PYRAMID_LIST => { GEOM_FILE           => ["level","slabsize"] ,
-                           GETTILE_PARAMS_LIST => ["slabsize"] },
-         SLAB_INDICES => { TFW_FILE            => ["level","slabsize"], 
+                           GETTILE_PARAMS      => ["slabsize"] },
+         SLAB_INDICE  => { TFW_FILE            => ["level","slabsize"], 
                            GEOM                => ["level","slabsize"] },
-    SLAB_INDICES_LIST => { GETMAP_PARAMS_LIST  => ["level","slabsize"] ,
-                           SLAB_PATHS_LIST     => ["level","slabsize"] },
+    SLAB_INDICES_LIST => { GETMAP_PARAMS       => ["level","slabsize"] ,
+                           SLAB_PATHS          => ["level","slabsize"] },
             SLAB_PATH => { GEOM_FILE           => ["level","slabsize"] },
-         TILE_INDICES => { SLAB_INFO           => ["level","slabsize"] }
+         TILE_INDICE  => { SLAB_INFO           => ["level","slabsize"] ,
+                           GETMAP_PARAMS       => ["level"] }
 };
 
 =begin nd
@@ -633,7 +613,7 @@ sub doIt {
 
     # Conversions autorisées ?
     if (! exists $conversions->{$options{from}->{type}}->{$options{to}->{type}}) {
-        ERROR(sprintf "%s -> %s is not handled", $options{from}->{type}, $options{to}->{type});
+        printf STDERR "%s -> %s is not handled\n", $options{from}->{type}, $options{to}->{type};
         return FALSE;
     }
     
@@ -641,49 +621,39 @@ sub doIt {
     my @mandatories = @{$conversions->{$options{from}->{type}}->{$options{to}->{type}}};
     foreach my $m (@mandatories) {
         if (! defined $options{$m}) {
-            ERROR(sprintf "Option '$m' is mandatory for conversion %s -> %s", $options{from}->{type}, $options{to}->{type});
+            printf STDERR "Option '$m' is mandatory for conversion %s -> %s\n", $options{from}->{type}, $options{to}->{type};
             return FALSE;
         }
     }
 
     # ---------------------------------------------------------------------------------------------
-    if ($options{from}->{type} eq "SLAB_INDICES_LIST" && $options{to}->{type} eq "GETMAP_PARAMS_LIST") {
+    if ($options{from}->{type} eq "SLAB_INDICES_LIST" && $options{to}->{type} eq "GETMAP_PARAMS") {
 
         my $filein = $options{from}->{path};
         open(IN, "<$filein") or do {
-            ERROR("Cannot open $filein to read in it");
+            print STDERR "Cannot open $filein to read in it\n";
             return FALSE;
         };
-
-        my $fileout = $options{to}->{path};
-        if ($options{add}) {
-            open(OUT, ">>$fileout") or do {
-                ERROR("Cannot open $fileout to write more in it");
-                return FALSE;
-            };
-        } else {
-            open(OUT, ">$fileout") or do {
-                ERROR("Cannot open $fileout to write in it");
-                return FALSE;
-            }; 
-        }
                 
         my $width = $options{"level"}->getTileWidth() * $options{"slabsize"}->[0];
         my $height = $options{"level"}->getTileHeight() * $options{"slabsize"}->[1];
         my $projection = $options{"tms"}->getSRS();
         my $inversion = $options{"tms"}->getInversion();
         my $memory = {};
-        my $complete = `wc -l $filein | cut -d' ' -f1`;
-        chomp($complete);
-        my $progress = Term::ProgressBar->new({name => 'GetMap writting...', count => $complete, remove => 1});
+
         my $done = 0;
-        my $next = 0;
+        if ($options{progress}) {
+            $options{progress}->{complete} = `wc -l $filein | cut -d' ' -f1`;
+            chomp($options{progress}->{complete});
+            $options{progress}->{bar} = Term::ProgressBar->new({name => 'GetMap writting...', count => $options{progress}->{complete}, fh => \*STDERR});
+        }
+
         while (my $line = <IN>) {
             chomp($line);
             $done++;
 
-            if ($done >= $next) {
-                $next = $progress->update($done);
+            if ($options{progress} && \$done >= $options{progress}->{next}) {
+                $options{progress}->{next} = $options{progress}->{bar}->update($done);
             }
 
             if ($done % $options{ratio} != 0) {
@@ -695,46 +665,34 @@ sub doIt {
                 $memory->{$COL}->{$ROW} = 1;
                 my ($xMin,$yMin,$xMax,$yMax) = $options{"level"}->indicesToBbox($COL, $ROW, $options{"slabsize"}->[0], $options{"slabsize"}->[1]);
                 if ($inversion) {
-                    printf OUT "WIDTH=$width&HEIGHT=$height&BBOX=$yMin,$xMin,$yMax,$xMax&CRS=$projection\n", ;
+                    print "WIDTH=$width&HEIGHT=$height&BBOX=$yMin,$xMin,$yMax,$xMax&CRS=$projection\n";
                 } else {
-                    printf OUT "WIDTH=$width&HEIGHT=$height&BBOX=$xMin,$yMin,$xMax,$yMax&CRS=$projection\n", ;
+                    print "WIDTH=$width&HEIGHT=$height&BBOX=$xMin,$yMin,$xMax,$yMax&CRS=$projection\n";
                 }
             }
         }
 
-        $progress->update($complete);
+        if ($options{progress}) {
+            $options{progress}->{bar}->update($options{progress}->{complete});
+        }
         
-        close(OUT);
         close(IN);
     }
 
 
     # ---------------------------------------------------------------------------------------------
-    elsif ($options{from}->{type} eq "SLAB_INDICES_LIST" && $options{to}->{type} eq "SLAB_PATHS_LIST") {
+    elsif ($options{from}->{type} eq "SLAB_INDICES_LIST" && $options{to}->{type} eq "SLAB_PATHS") {
 
         if (! $options{tms}->isQTree()) {
-            ERROR("Only QTRee TMS are handled for conversion SLAB_INDICES_LIST -> SLAB_PATHS_LIST");
+            print STDERR "Only QTRee TMS are handled for conversion SLAB_INDICES_LIST -> SLAB_PATHS\n";
             return FALSE;
         }
 
         my $filein = $options{from}->{path};
         open(IN, "<$filein") or do {
-            ERROR("Cannot open $filein to read in it");
+            print STDERR "Cannot open $filein to read in it\n";
             return FALSE;
         };
-
-        my $fileout = $options{to}->{path};
-        if ($options{add}) {
-            open(OUT, ">>$fileout") or do {
-                ERROR("Cannot open $fileout to write more in it");
-                return FALSE;
-            };
-        } else {
-            open(OUT, ">$fileout") or do {
-                ERROR("Cannot open $fileout to write in it");
-                return FALSE;
-            }; 
-        }
 
         my $baseLevel = $options{level}->getID();
         my @aboveLevels;
@@ -743,18 +701,22 @@ sub doIt {
         }
         
         my $memory = {};
-        my $complete = `wc -l $filein | cut -d' ' -f1`;
-        chomp($complete);
-        my $progress = Term::ProgressBar->new({name => "Slabs' paths writting...", count => $complete, remove => 1});
+
+        if ($options{progress}) {
+            $options{progress}->{complete} = `wc -l $filein | cut -d' ' -f1`;
+            chomp($options{progress}->{complete});
+            $options{progress}->{bar} = Term::ProgressBar->new({name => "Slabs' paths writting...", count => $options{progress}->{complete}, fh => \*STDERR});
+        }
+
+
         my $done = 0;
-        my $next = 0;
 
         while (my $line = <IN>) {
             chomp($line);
             $done++;
 
-            if ($done >= $next) {
-                $next = $progress->update($done);
+            if ($options{progress} && \$done >= $options{progress}->{next}) {
+                $options{progress}->{next} = $options{progress}->{bar}->update($done);
             }
 
             my ($COL, $ROW) = split(/,/, $line);
@@ -762,9 +724,9 @@ sub doIt {
                 $memory->{$baseLevel}->{$COL}->{$ROW} = 1;
                 if ($options{storage}->{type} eq "FILE") {
                     my $b36 = ROK4::Core::Base36::indicesToB36Path($COL, $ROW, $options{storage}->{depth} + 1);
-                    print OUT "$baseLevel/$b36.tif\n";
+                    print "$baseLevel/$b36.tif\n";
                 } else {
-                    print OUT "${baseLevel}_${COL}_${ROW}\n";
+                    print "${baseLevel}_${COL}_${ROW}\n";
                 }
             }
 
@@ -778,56 +740,47 @@ sub doIt {
                         $memory->{$levelID}->{$COL}->{$ROW} = 1;
                         if ($options{storage}->{type} eq "FILE") {
                             my $b36 = ROK4::Core::Base36::indicesToB36Path($COL, $ROW, $options{storage}->{depth} + 1);
-                            print OUT "$levelID/$b36.tif\n";
+                            print "$levelID/$b36.tif\n";
                         } else {
-                            print OUT "${levelID}_${COL}_${ROW}\n";
+                            print "${levelID}_${COL}_${ROW}\n";
                         }
                     }
                 }
             }
         }
 
-        $progress->update($complete);
+        if ($options{progress}) {
+            $options{progress}->{bar}->update($options{progress}->{complete});
+        }
         
-        close(OUT);
         close(IN);
     }
     
     # ---------------------------------------------------------------------------------------------
-    elsif ($options{from}->{type} eq "BBOXES_LIST" && $options{to}->{type} eq "SLAB_INDICES_LIST") {
+    elsif ($options{from}->{type} eq "BBOXES_LIST" && $options{to}->{type} eq "SLAB_INDICES") {
 
         my $filein = $options{from}->{path};
         open(IN, "<$filein") or do {
-            ERROR("Cannot open $filein to read in it");
+            print STDERR "Cannot open $filein to read in it\n";
             return FALSE;
         };
 
-        my $fileout = $options{to}->{path};
-        if ($options{add}) {
-            open(OUT, ">>$fileout") or do {
-                ERROR("Cannot open $fileout to write more in it");
-                return FALSE;
-            };
-        } else {
-            open(OUT, ">$fileout") or do {
-                ERROR("Cannot open $fileout to write in it");
-                return FALSE;
-            }; 
+        my $memory = {};
+
+        if ($options{progress}) {
+            $options{progress}->{complete} = `wc -l $filein | cut -d' ' -f1`;
+            chomp($options{progress}->{complete});
+            $options{progress}->{bar} = Term::ProgressBar->new({name => "Slabs' indices writting...", count => $options{progress}->{complete}, fh => \*STDERR});
         }
 
-        my $memory = {};
-        my $complete = `wc -l $filein | cut -d' ' -f1`;
-        chomp($complete);
-        my $progress = Term::ProgressBar->new({name => "Slabs' indices writting...", count => $complete, remove => 1});
         my $done = 0;
-        my $next = 0;
 
         while (my $line = <IN>) {
             chomp($line);
             $done++;
 
-            if ($done >= $next) {
-                $next = $progress->update($done);
+            if ($options{progress} && \$done >= $options{progress}->{next}) {
+                $options{progress}->{next} = $options{progress}->{bar}->update($done);
             }
 
             $line =~ s/\s//g;
@@ -842,7 +795,7 @@ sub doIt {
             for (my $col = $colMin; $col <= $colMax; $col++) {
                 for (my $row = $rowMin; $row <= $rowMax; $row++) {
                     if (! exists $memory->{$col}->{$row}) {
-                        print OUT "$col,$row\n";
+                        print "$col,$row\n";
                         $memory->{$col}->{$row} = 1;
                     }
                 }
@@ -850,47 +803,37 @@ sub doIt {
 
         }
 
-        $progress->update($complete);
+        if ($options{progress}) {
+            $options{progress}->{bar}->update($options{progress}->{complete});
+        }
         
-        close(OUT);
         close(IN);
     }
 
     # ---------------------------------------------------------------------------------------------
-    elsif ($options{from}->{type} eq "PYRAMID_LIST" && $options{to}->{type} eq "GETTILE_PARAMS_LIST") {
+    elsif ($options{from}->{type} eq "PYRAMID_LIST" && $options{to}->{type} eq "GETTILE_PARAMS") {
 
         my $filein = $options{from}->{path};
         open(IN, "<$filein") or do {
-            ERROR("Cannot open $filein to read in it");
+            print STDERR "Cannot open $filein to read in it\n";
             return FALSE;
         };
-
-        my $fileout = $options{to}->{path};
-        if ($options{add}) {
-            open(OUT, ">>$fileout") or do {
-                ERROR("Cannot open $fileout to write more in it");
-                return FALSE;
-            };
-        } else {
-            open(OUT, ">$fileout") or do {
-                ERROR("Cannot open $fileout to write in it");
-                return FALSE;
-            }; 
+        
+        if ($options{progress}) {
+            $options{progress}->{complete} = `wc -l $filein | cut -d' ' -f1`;
+            chomp($options{progress}->{complete});
+            $options{progress}->{bar} = Term::ProgressBar->new({name => 'GetTile writting...', count => $options{progress}->{complete}, fh => \*STDERR});
         }
-                
-        my $complete = `wc -l $filein | cut -d' ' -f1`;
-        chomp($complete);
-        my $progress = Term::ProgressBar->new({name => 'GetTile writting...', count => $complete, remove => 1});
+
         my $done = 0;
         my $slabs = 0;
-        my $next = 0;
 
         # On zappe les racines
         while (my $line = <IN>) {
             chomp($line);
             $done++;
-            if ($done >= $next) {
-                $next = $progress->update($done);
+            if ($options{progress} && \$done >= $options{progress}->{next}) {
+                $options{progress}->{next} = $options{progress}->{bar}->update($done);
             }
             if ($line eq "#") {last;}
         }
@@ -899,8 +842,8 @@ sub doIt {
             chomp($line);
             $done++;
 
-            if ($done >= $next) {
-                $next = $progress->update($done);
+            if ($options{progress} && \$done >= $options{progress}->{next}) {
+                $options{progress}->{next} = $options{progress}->{bar}->update($done);
             }
 
             my ($level,$COL,$ROW);
@@ -948,13 +891,14 @@ sub doIt {
             my $col = $COL * $options{"slabsize"}->[0] + int(rand($options{"slabsize"}->[0]));
             my $row = $ROW * $options{"slabsize"}->[1] + int(rand($options{"slabsize"}->[1]));
 
-            print OUT "TILEMATRIX=$level&TILECOL=$col&TILEROW=$row\n";
+            print "TILEMATRIX=$level&TILECOL=$col&TILEROW=$row\n";
 
         }
 
-        $progress->update($complete);
+        if ($options{progress}) {
+            $options{progress}->{bar}->update($options{progress}->{complete});
+        }
         
-        close(OUT);
         close(IN);
     }
     
@@ -992,12 +936,12 @@ sub doIt {
         my $geometry = $options{"level"}->indicesToGeom($col, $row, $options{"slabsize"}->[0], $options{"slabsize"}->[1]);
 
         if (! defined $geometry) {
-            ERROR("Cannot calculate geometry from slab indices");
+            print STDERR "Cannot calculate geometry from slab indices\n";
             return FALSE;
         }
 
         if (! ROK4::Core::ProxyGDAL::exportFile($geometry, $options{to}->{path})) {
-            ERROR("Cannot write geometry into ".$options{to}->{path});
+            printf STDERR "Cannot write geometry into %s\n", $options{to}->{path};
             return FALSE;
         }
     }
@@ -1007,22 +951,24 @@ sub doIt {
 
         my $filein = $options{from}->{path};
         open(IN, "<$filein") or do {
-            ERROR("Cannot open $filein to read in it");
+            print STDERR "Cannot open $filein to read in it\n";
             return FALSE;
         };
 
-        my $complete = `wc -l $filein | cut -d' ' -f1`;
-        chomp($complete);
-        my $progress = Term::ProgressBar->new({name => 'Geometry writting...', count => $complete, remove => 1});
+        if ($options{progress}) {
+            $options{progress}->{complete} = `wc -l $filein | cut -d' ' -f1`;
+            chomp($options{progress}->{complete});
+            $options{progress}->{bar} = Term::ProgressBar->new({name => 'Geometry writting...', count => $options{progress}->{complete}, fh => \*STDERR});
+        }
+        
         my $done = 0;
-        my $next = 0;
 
         # On zappe les racines
         while (my $line = <IN>) {
             chomp($line);
             $done++;
-            if ($done >= $next) {
-                $next = $progress->update($done);
+            if ($options{progress} && \$done >= $options{progress}->{next}) {
+                $options{progress}->{next} = $options{progress}->{bar}->update($done);
             }
             if ($line eq "#") {last;}
         }
@@ -1031,8 +977,8 @@ sub doIt {
         while (my $line = <IN>) {
             chomp($line);
             $done++;
-            if ($done >= $next) {
-                $next = $progress->update($done);
+            if ($options{progress} && \$done >= $options{progress}->{next}) {
+                $options{progress}->{next} = $options{progress}->{bar}->update($done);
             }
 
             my ($col,$row);
@@ -1079,37 +1025,36 @@ sub doIt {
             }
         }
 
+        if ($options{progress}) {
+            $options{progress}->{bar}->update($options{progress}->{complete});
+        }
+
         close(IN);
 
         if (! defined $geometry) {
-            WARN("No data slab in the pyramid's list for the level ".$options{level}->getID());
-            WARN("No file is written");
+            printf "WARN : No data slab in the pyramid's list for the level %s\n", $options{level}->getID();
+            print "WARN : No file is written\n";
             return TRUE;
         }
 
         if (! ROK4::Core::ProxyGDAL::exportFile($geometry, $options{to}->{path})) {
-            ERROR("Cannot write geometry into ".$options{to}->{path});
+            printf STDERR "Cannot write geometry into %s\n", $options{to}->{path};
             return FALSE;
         }
     }
 
     # ---------------------------------------------------------------------------------------------
-    elsif ($options{from}->{type} eq "GEOM_FILE" && ($options{to}->{type} eq "SLAB_INDICES_LIST" || $options{to}->{type} eq "SQL_FILE" || $options{to}->{type} eq "GETTILE_PARAMS_LIST")) {
+    elsif ($options{from}->{type} eq "GEOM_FILE" && ($options{to}->{type} eq "SLAB_INDICES" || $options{to}->{type} eq "SQL_FILE" || $options{to}->{type} eq "GETTILE_PARAMS")) {
 
         my $bboxes = ROK4::Core::ProxyGDAL::getBboxes($options{from}->{geom});
 
-        my $fileout = $options{to}->{path};
-
-        if ($options{add}) {
-            open(OUT, ">>$fileout") or do {
-                ERROR("Cannot open $fileout to write more in it");
+        
+        if (exists $options{to}->{path}) {
+            my $fileout = $options{to}->{path};
+            open(OUT, ">$fileout") or do {
+                print STDERR "Cannot open $fileout to write in it\n";
                 return FALSE;
             };
-        } else {
-            open(OUT, ">$fileout") or do {
-                ERROR("Cannot open $fileout to write in it");
-                return FALSE;
-            }; 
         }
 
         if ($options{to}->{type} eq "SQL_FILE") {
@@ -1117,17 +1062,19 @@ sub doIt {
         }
 
         my @extrema;
-        my $complete = 0;
+        $options{progress}->{complete} = 0;
 
         for (my $i = 0; $i < scalar(@{$bboxes}); $i++) {
             my @ext = $options{"level"}->bboxToIndices(@{$bboxes->[$i]}, $options{"slabsize"}->[0], $options{"slabsize"}->[1]);
-            $complete += ( ($ext[1] - $ext[0] + 1)*($ext[3] - $ext[2] + 1) );
+            $options{progress}->{complete} += ( ($ext[1] - $ext[0] + 1)*($ext[3] - $ext[2] + 1) );
             push(@extrema, \@ext);
         }
 
-        my $progress = Term::ProgressBar->new({name => 'Writting...', count => $complete, remove => 1});
+        if ($options{progress}) {
+            $options{progress}->{bar} = Term::ProgressBar->new({name => 'Writting...', count => $options{progress}->{complete}, fh => \*STDERR});
+        }
+
         my $done = 0;
-        my $next = 0;
         my $memory = {};
 
         for (my $i = 0; $i < scalar(@{$bboxes}); $i++) {
@@ -1149,18 +1096,18 @@ sub doIt {
                                 $col, $row,
                                 ROK4::Core::ProxyGDAL::getWkb($OGRslab);
                         }
-                        elsif ($options{to}->{type} eq "SLAB_INDICES_LIST") {
-                            print OUT "$col,$row\n";
+                        elsif ($options{to}->{type} eq "SLAB_INDICES") {
+                            print "$col,$row\n";
                         }
-                        elsif ($options{to}->{type} eq "GETTILE_PARAMS_LIST") {
+                        elsif ($options{to}->{type} eq "GETTILE_PARAMS") {
                             my $c = $col * $options{"slabsize"}->[0] + int(rand($options{"slabsize"}->[0]));
                             my $r = $row * $options{"slabsize"}->[1] + int(rand($options{"slabsize"}->[1]));
-                            printf OUT "TILEMATRIX=%s&TILECOL=$c&TILEROW=$r\n", $options{"level"}->getID();
+                            printf "TILEMATRIX=%s&TILECOL=$c&TILEROW=$r\n", $options{"level"}->getID();
                         }
                     }
 
-                    if ($done >= $next) {
-                        $next = $progress->update($done);
+                    if ($options{progress} && \$done >= $options{progress}->{next}) {
+                        $options{progress}->{next} = $options{progress}->{bar}->update($done);
                     }
 
                 }
@@ -1171,7 +1118,13 @@ sub doIt {
             print OUT "\\.\n\n";
         } 
 
-        close(OUT);
+        if (exists $options{to}->{path}) {
+            close(OUT);
+        }
+
+        if ($options{progress}) {
+            $options{progress}->{bar}->update($options{progress}->{complete});
+        }
     }
 
     # ---------------------------------------------------------------------------------------------
@@ -1180,17 +1133,19 @@ sub doIt {
         my $bboxes = ROK4::Core::ProxyGDAL::getBboxes($options{from}->{geom});
 
         my @extrema;
-        my $complete = 0;
+        $options{progress}->{complete} = 0;
 
         for (my $i = 0; $i < scalar(@{$bboxes}); $i++) {
             my @ext = $options{"level"}->bboxToIndices(@{$bboxes->[$i]}, $options{"slabsize"}->[0], $options{"slabsize"}->[1]);
-            $complete += ( ($ext[1] - $ext[0] + 1)*($ext[3] - $ext[2] + 1) );
+            $options{progress}->{complete} += ( ($ext[1] - $ext[0] + 1)*($ext[3] - $ext[2] + 1) );
             push(@extrema, \@ext);
         }
 
-        my $progress = Term::ProgressBar->new({name => 'Counting...', count => $complete, remove => 1});
+        if ($options{progress}) {
+            $options{progress}->{bar} = Term::ProgressBar->new({name => 'Counting...', count => $options{progress}->{complete}, fh => \*STDERR});
+        }
+
         my $done = 0;
-        my $next = 0;
         my $memory = {};
         my $count = 0;
 
@@ -1211,28 +1166,27 @@ sub doIt {
                         $count++;
                     }
 
-                    if ($done >= $next) {
-                        $next = $progress->update($done);
+                    if ($options{progress} && \$done >= $options{progress}->{next}) {
+                        $options{progress}->{next} = $options{progress}->{bar}->update($done);
                     }
                 }
             }
         }
 
-        INFO(sprintf "Level %s : $count slabs", $options{"level"}->getID());
+        if ($options{progress}) {
+            $options{progress}->{bar}->update($options{progress}->{complete});
+        }
+
+        printf "Level %s : $count slabs\n", $options{"level"}->getID();
     }
 
     # ---------------------------------------------------------------------------------------------
-    elsif ($options{from}->{type} eq "BBOX" && ($options{to}->{type} eq "SLAB_INDICES_LIST" || $options{to}->{type} eq "SQL_FILE" || $options{to}->{type} eq "GETTILE_PARAMS_LIST")) {
+    elsif ($options{from}->{type} eq "BBOX" && ($options{to}->{type} eq "SLAB_INDICES" || $options{to}->{type} eq "SQL_FILE" || $options{to}->{type} eq "GETTILE_PARAMS")) {
 
-        my $fileout = $options{to}->{path};
-        if ($options{add}) {
-            open(OUT, ">>$fileout") or do {
-                ERROR("Cannot open $fileout to write more in it");
-                return FALSE;
-            };
-        } else {
+        if (exists $options{to}->{path}) {
+            my $fileout = $options{to}->{path};
             open(OUT, ">$fileout") or do {
-                ERROR("Cannot open $fileout to write in it");
+                print STDERR "Cannot open $fileout to write in it\n";
                 return FALSE;
             }; 
         }
@@ -1242,11 +1196,13 @@ sub doIt {
         }
 
         my ($rowMin, $rowMax, $colMin, $colMax) = $options{"level"}->bboxToIndices(@{$options{from}->{bbox}}, $options{"slabsize"}->[0], $options{"slabsize"}->[1]);
-        my $complete = ($rowMax - $rowMin + 1)*($colMax - $colMin + 1);
+        $options{progress}->{complete} = ($rowMax - $rowMin + 1)*($colMax - $colMin + 1);
 
-        my $progress = Term::ProgressBar->new({name => 'Slab indices list writting...', count => $complete, remove => 1});
+        if ($options{progress}) {
+            $options{progress}->{bar} = Term::ProgressBar->new({name => 'Slab indices list writting...', count => $options{progress}->{complete}, fh => \*STDERR});
+        }
+
         my $done = 0;
-        my $next = 0;
         
         for (my $col = $colMin; $col <= $colMax; $col++) {
             for (my $row = $rowMin; $row <= $rowMax; $row++) {
@@ -1260,17 +1216,17 @@ sub doIt {
                         $col, $row,
                         ROK4::Core::ProxyGDAL::getWkb($OGRslab);
                 }
-                elsif ($options{to}->{type} eq "SLAB_INDICES_LIST") {
-                    print OUT "$col,$row\n";
+                elsif ($options{to}->{type} eq "SLAB_INDICES") {
+                    print "$col,$row\n";
                 }
-                elsif ($options{to}->{type} eq "GETTILE_PARAMS_LIST") {
+                elsif ($options{to}->{type} eq "GETTILE_PARAMS") {
                     my $c = $col * $options{"slabsize"}->[0] + int(rand($options{"slabsize"}->[0]));
                     my $r = $row * $options{"slabsize"}->[1] + int(rand($options{"slabsize"}->[1]));
-                    printf OUT "TILEMATRIX=%s&TILECOL=$c&TILEROW=$r\n", $options{"level"}->getID();
+                    printf "TILEMATRIX=%s&TILECOL=$c&TILEROW=$r\n", $options{"level"}->getID();
                 }
 
-                if ($done >= $next) {
-                    $next = $progress->update($done);
+                if ($options{progress} && \$done >= $options{progress}->{next}) {
+                    $options{progress}->{next} = $options{progress}->{bar}->update($done);
                 }
 
             }
@@ -1280,11 +1236,17 @@ sub doIt {
             print OUT "\\.\n\n";
         } 
 
-        close(OUT);
+        if (exists $options{to}->{path}) {
+            close(OUT);
+        }
+
+        if ($options{progress}) {
+            $options{progress}->{bar}->update($options{progress}->{complete});
+        }
     }
 
     # ---------------------------------------------------------------------------------------------
-    elsif ($options{from}->{type} eq "SLAB_INDICES" && ($options{to}->{type} eq "TFW_FILE" || $options{to}->{type} eq "GEOM")) {
+    elsif ($options{from}->{type} eq "SLAB_INDICE" && ($options{to}->{type} eq "TFW_FILE" || $options{to}->{type} eq "GEOM")) {
 
         my ($xMin,$yMin,$xMax,$yMax) = $options{"level"}->indicesToBbox(
             $options{from}->{col}, $options{from}->{row},
@@ -1297,7 +1259,7 @@ sub doIt {
 
             my $fileout = $options{to}->{path};
             open(OUT, ">$fileout") or do {
-                ERROR("Cannot open $fileout to write in it");
+                print STDERR "Cannot open $fileout to write in it\n";
                 return FALSE;
             };
 
@@ -1306,14 +1268,14 @@ sub doIt {
 
             close(OUT);
         } elsif ($options{to}->{type} eq "GEOM") {
-            INFO(ROK4::Core::ProxyGDAL::getWkt(ROK4::Core::ProxyGDAL::geometryFromBbox($xMin,$yMin,$xMax,$yMax)));
+            printf "%s\n", ROK4::Core::ProxyGDAL::getWkt(ROK4::Core::ProxyGDAL::geometryFromBbox($xMin,$yMin,$xMax,$yMax));
         }
 
 
     }
 
     # ---------------------------------------------------------------------------------------------
-    elsif ($options{from}->{type} eq "TILE_INDICES" && $options{to}->{type} eq "SLAB_INFO") {
+    elsif ($options{from}->{type} eq "TILE_INDICE" && $options{to}->{type} eq "SLAB_INFO") {
 
         my $ID = $options{"level"}->getID();
         my $COL = int($options{from}->{col} / $options{"slabsize"}->[0]);
@@ -1327,7 +1289,21 @@ sub doIt {
             $storage = "${ID}_${COL}_${ROW}";
         }
 
-        INFO("Level $ID : slab indices ($COL,$ROW), storage $storage");
+        print "Level $ID : slab indices ($COL,$ROW), storage $storage\n";
+    }
+    elsif ($options{from}->{type} eq "TILE_INDICE" && $options{to}->{type} eq "GETMAP_PARAMS") {
+
+        my $projection = $options{"tms"}->getSRS();
+        my $inversion = $options{"tms"}->getInversion();
+        my $width = $options{"level"}->getTileWidth();
+        my $height = $options{"level"}->getTileHeight();
+
+        my ($xMin,$yMin,$xMax,$yMax) = $options{"level"}->indicesToBbox($options{from}->{col}, $options{from}->{row}, 1, 1);
+        if ($inversion) {
+            print "WIDTH=$width&HEIGHT=$height&BBOX=$yMin,$xMin,$yMax,$xMax&CRS=$projection\n";
+        } else {
+            print "WIDTH=$width&HEIGHT=$height&BBOX=$xMin,$yMin,$xMax,$yMax&CRS=$projection\n";
+        }
     }
 
     # ---------------------------------------------------------------------------------------------
@@ -1346,7 +1322,7 @@ sub doIt {
                 $storage = "${ID}_${COL}_${ROW}";
             }
 
-            INFO("Level $ID : slab indices ($COL,$ROW), storage $storage");
+            print "Level $ID : slab indices ($COL,$ROW), storage $storage\n";
         } else {
             my @levels = $options{tms}->getTileMatrixByArray();
 
@@ -1363,7 +1339,7 @@ sub doIt {
                     $storage = "${ID}_${COL}_${ROW}";
                 }
 
-                INFO("Level $ID : slab indices ($COL,$ROW), storage $storage");
+                print "Level $ID : slab indices ($COL,$ROW), storage $storage\n";
             }
         }
     }
@@ -1376,7 +1352,7 @@ sub doIt {
             my $COL = $options{"level"}->xToColumn($options{from}->{x});
             my $ROW = $options{"level"}->yToRow($options{from}->{y});
             
-            INFO("Level $ID : tile indices ($COL,$ROW)");
+            print "Level $ID : tile indices ($COL,$ROW)\n";
         } else {
 
             my @levels = $options{tms}->getTileMatrixByArray();
@@ -1386,7 +1362,7 @@ sub doIt {
                 my $COL = $tm->xToColumn($options{from}->{x});
                 my $ROW = $tm->yToRow($options{from}->{y});
                 
-                INFO("Level $ID : tile indices ($COL,$ROW)");
+                print "Level $ID : tile indices ($COL,$ROW)\n";
             }
         }
     }
