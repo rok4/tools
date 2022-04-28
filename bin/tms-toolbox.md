@@ -10,7 +10,7 @@
 
 ### Commandes
 
-* `tms-toolbox.pl --tms <TMS name> [--slabsize <INT>x<INT>] [--storage FILE[:<INT>]|CEPH|S3|SWIFT] [--level <STRING>] [--above <STRING>] [--ratio <INT>] --from <STRING> --to <STRING> [--progress] [--version]`
+* `tms-toolbox.pl --tms <TMS name> [--slabsize <INT>x<INT>] [--storage FILE[:<INT>]|CEPH|S3|SWIFT] [--level <STRING>] [--above <STRING>] [--ratio <INT>] --from <STRING> --to <STRING> [--progress] [--buffer <INT>] [--version]`
 
 ### Options
 
@@ -25,6 +25,7 @@
 * `--slabsize <integer>x<integer>` Nombre de tuiles, en largeur et en hauteur, dans la dalle
 * `--from <string>` Données en entrée du convertisseur
 * `--to <string>` Données en sortie du convertisseur
+* `--buffer <integer>` Précision d'une taille de buffer en pixel à appliquer pour élargir les étendues lors des conversions
 * `--progress` Active la barre de progression. Celle ci va sur la sortie des erreurs. Le contenu attendu (sortie standard) doit alors être redirigé vers un fichier.
 
 ## Entrées et sorties

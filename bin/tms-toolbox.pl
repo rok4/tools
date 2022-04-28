@@ -93,6 +93,7 @@ my %options =
     "slabsize" => undef,
     "level" => undef,
     "above" => undef,
+    "buffer" => undef,
     "progress" => undef
 );
 
@@ -424,6 +425,7 @@ sub init {
         "ratio=s" => \$options{ratio},
         "from=s" => \$options{from},
         "to=s" => \$options{to},
+        "buffer=s" => \$options{buffer},
         "progress" => \$options{progress}
     ) or do {
         printf STDERR "Unappropriate usage\n";
@@ -458,6 +460,14 @@ sub init {
         }
     } else {
         $options{"slabsize"} = undef;
+    }
+
+    ############# buffer
+    if (defined $options{"buffer"} && $options{"buffer"} ne "") {
+        if ($options{"buffer"} !~ m/^(\d+)$/) {
+            print STDERR "Option 'buffer' have to respect format <integer>\n";
+            return FALSE;
+        }
     }
 
     ############# progress
@@ -1299,6 +1309,15 @@ sub doIt {
         my $height = $options{"level"}->getTileHeight();
 
         my ($xMin,$yMin,$xMax,$yMax) = $options{"level"}->indicesToBbox($options{from}->{col}, $options{from}->{row}, 1, 1);
+
+        if ($options{buffer}) {
+            my $incr = $options{"level"}->getResolution() * $options{buffer};
+            $xMin -= $incr;
+            $yMin -= $incr;
+            $xMax += $incr;
+            $yMax += $incr;
+        }
+
         if ($inversion) {
             print "WIDTH=$width&HEIGHT=$height&BBOX=$yMin,$xMin,$yMax,$xMax&CRS=$projection\n";
         } else {
