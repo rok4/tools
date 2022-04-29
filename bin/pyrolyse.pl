@@ -40,11 +40,6 @@
 File: pyrolyse.pl
 
 Section: PYROLYSE tool
-
-Synopsis:
-    (start code)
-    pyrolyse.pl --pyr=path --json=file [--slabs ALL|DATA|MASK] [--tiles ALL|DATA|MASK] [--perfs=file] [--follow-links]
-    (end code)
 =cut
 
 ################################################################################
@@ -62,6 +57,7 @@ use Term::ProgressBar;
 use File::Basename;
 use Log::Log4perl qw(:easy);
 use Time::HiRes;
+use Data::Dumper;
 
 # My search module
 use FindBin qw($Bin);
@@ -85,36 +81,35 @@ my $VERSION = '@VERSION@';
 =begin nd
 Variable: options
 
-Contains pyrolyse call options :
-
-    version - To obtain the command's version
-    help - To obtain the command's help
-    usage - To obtain the command's usage
-    
-    pyr - To precise the pyramid's descriptor path
+Contains pyrolyse call options :    
+    pyramid - To precise the pyramid's descriptor path
     json - To precise the JSON file to write
     perfs - To precise the text file to write read times (only if tiles statistics enabled)
     follow_links - To precise if we want to treat links target like pyramid's slabs
 
     slabs - To precise if we want slabs statistics (number, mean/min/max size)
     tiles - To precise if we want tiles statistics (number, mean/min/max size)
+
+    progress - To precise if we want a progress bar
     
 =cut
 my %options =
 (
-    "version"    => 0,
-    "help"       => 0,
-    "usage"      => 0,
-
     # Mandatory
-    "pyr"  => undef,
+    "pyramid"  => undef,
     "json"  => undef,
     # Optionnal
     "slabs"  => undef,
     "tiles"  => undef,
     "perfs"  => undef,
-    "follow_links"  => FALSE
+    "follow_links"  => FALSE,
+    "progress" => undef
 );
+
+=begin nd
+Variable: help   
+=cut
+my $help = "pyrolyse.pl --pyramid=<storage type>://<decriptor path> --json=file [--slabs ALL|DATA|MASK] [--tiles ALL|DATA|MASK] [--perfs=file] [--follow-links] [--progress]";
 
 ####################################################################################################
 #                                         Group: Functions                                         #
@@ -137,13 +132,11 @@ sub main {
 
     # initialization
     if (! main::init()) {
-        ERROR("ERROR INITIALIZATION !");
         exit 1;
     }
 
     # execution
     if (! main::doIt()) {
-        ERROR("ERROR EXECUTION !");
         exit 5;
     }
 }
@@ -170,31 +163,32 @@ sub init {
 
     # init Options
     GetOptions(
-        "help|h" => sub {
-            INFO("See documentation here: https://github.com/rok4/rok4");
-            exit 0;
-        },
-        "version|v" => sub { INFO("$VERSION"); exit 0; },
-        "usage" => sub {
-            INFO("See documentation here: https://github.com/rok4/rok4");
-            exit 0;
-        },
+        "version|v" => sub { print "$VERSION\n"; exit 0; },
+        "help|h" => sub { print "$VERSION\n$help\n"; exit 0; },
         
-        "pyr=s" => \$options{pyr},
+        "pyramid=s" => \$options{pyramid},
         "json=s" => \$options{json},
         "perfs=s" => \$options{perfs},
         "slabs=s" => \$options{slabs},
         "tiles=s" => \$options{tiles},
-        "follow-links" => \$options{follow_links}
+        "follow-links" => \$options{follow_links},
+        "progress" => \$options{progress}
     ) or do {
-        ERROR("Unappropriate usage");
-        ERROR("See documentation here: https://github.com/rok4/rok4");
+        print STDERR "Unappropriate usage\n";
+        print STDERR "$VERSION\n$help\n";
         exit -1;
     };
     
-    ############# PYR
-    if (! defined $options{pyr} || $options{pyr} eq "") {
-        ERROR("Option 'pyr' not defined !");
+    ############# PYRAMID
+    if (! defined $options{pyramid} || $options{pyramid} eq "") {
+        ERROR("Option 'pyramid' not defined !");
+        return FALSE;
+    }
+
+    $options{pyramid} = ROK4::Core::ProxyPyramid::load($options{pyramid});
+
+    if (! defined $options{pyramid}) {
+        ERROR("Cannot create the Pyramid object (neither raster nor vector)");
         return FALSE;
     }
     
@@ -236,6 +230,14 @@ sub init {
         }
     }
 
+    ############# PROGRESS
+    if ($options{"progress"}) {
+        $options{"progress"} = {
+            "bar" => undef,
+            "next" => 0
+        }
+    }
+
     
     return TRUE;
 }
@@ -249,12 +251,7 @@ Function: doIt
 =cut
 sub doIt {
 
-    my $objPyramid = ROK4::Core::ProxyPyramid::load($options{pyr});
-
-    if (! defined $objPyramid) {
-        ERROR("Cannot create the Pyramid object (neither raster nor vector)");
-        return FALSE;
-    }
+    my $objPyramid = $options{pyramid};
 
     my $storageType = $objPyramid->getStorageType();
 
@@ -342,9 +339,11 @@ sub doIt {
             $total += scalar(values(%{$slabs->{$level}->{MASK}}));
         }
     }
-    my $progress = Term::ProgressBar->new({name => 'Content browse...', count => $total});
+
     my $done = 0;
-    my $next = 0;
+    if ($options{progress}) {
+        $options{progress}->{bar} = Term::ProgressBar->new({name => 'Content browse...', count => $total, fh => \*STDERR});
+    }
 
     # Traitement
 
@@ -389,8 +388,8 @@ sub doIt {
 
                     $done++;
 
-                    if ($done >= $next) {
-                        $next = $progress->update($done);
+                    if ($options{progress} && $done >= $options{progress}->{next}) {
+                        $options{progress}->{next} = $options{progress}->{bar}->update($done);
                     }
 
                     my $slabPath = $parts->{origin};

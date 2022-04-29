@@ -40,11 +40,6 @@
 File: sup-pyr.pl
 
 Section: SUP-PYR tool
-
-Synopsis:
-    (start code)
-    sup-pyr.pl --pyr=file [--full] [--stop]
-    (end code)
 =cut
 
 ################################################################################
@@ -81,29 +76,26 @@ my $VERSION = '@VERSION@';
 =begin nd
 Variable: options
 
-Contains sup-pyr call options :
-
-    version - To obtain the command's version
-    help - To obtain the command's help
-    usage - To obtain the command's usage
-    
-    pyr - To precise the pyramid's descriptor path
+Contains sup-pyr call options :    
+    pyramid - To precise the pyramid's descriptor path
     full - To precise if we want to remove the pyramid's descriptor file and list file too
     stop - To precise if we have to stop when an error is occured
     
 =cut
 my %options =
 (
-    "version"    => 0,
-    "help"       => 0,
-    "usage"      => 0,
-
     # Mandatory
-    "pyr"  => undef,
+    "pyramid"  => undef,
     # Optionnal
     "full"  => FALSE,
     "stop"  => FALSE
 );
+
+
+=begin nd
+Variable: help   
+=cut
+my $help = "sup-pyr.pl --pyramid=<storage type>://<decriptor path> [--full] [--stop]";
 
 ####################################################################################################
 #                                         Group: Functions                                         #
@@ -118,25 +110,15 @@ See Also:
     <init>, <doIt>
 =cut
 sub main {
-    printf("SUP-PYR : version [%s]\n",$VERSION);
-
-    print STDOUT "BEGIN\n";
-
     # initialization
-    ALWAYS("> Initialization");
     if (! main::init()) {
-        print STDERR "ERROR INITIALIZATION !\n";
         exit 1;
     }
 
     # execution
-    ALWAYS("> Execution");
     if (! main::doIt()) {
-        print STDERR "ERROR EXECUTION !\n";
         exit 5;
     }
-
-    print STDOUT "END\n";
 }
 
 =begin nd
@@ -161,22 +143,15 @@ sub init {
 
     # init Options
     GetOptions(
-        "help|h" => sub {
-            printf "See documentation here: https://github.com/rok4/rok4\n" ;
-            exit 0;
-        },
-        "version|v" => sub { exit 0; },
-        "usage" => sub {
-            printf "See documentation here: https://github.com/rok4/rok4\n" ;
-            exit 0;
-        },
+        "version|v" => sub { print "$VERSION\n"; exit 0; },
+        "help|h" => sub { print "$VERSION\n$help\n"; exit 0; },
         
-        "pyr=s" => \$options{pyr},
+        "pyramid=s" => \$options{pyramid},
         "full" => \$options{full},
         "stop" => \$options{stop}
     ) or do {
-        printf "Unappropriate usage\n";
-        printf "See documentation here: https://github.com/rok4/rok4\n";
+        print STDERR "Unappropriate usage\n";
+        print STDERR "$VERSION\n$help\n";
         exit -1;
     };
     
@@ -186,9 +161,16 @@ sub init {
         layout => '%5p : %m (%M) %n'
     });
     
-    ############# PYR
-    if (! defined $options{pyr} || $options{pyr} eq "") {
-        ERROR("Option 'pyr' not defined !");
+    ############# PYRAMID
+    if (! defined $options{pyramid} || $options{pyramid} eq "") {
+        ERROR("Option 'pyramid' not defined !");
+        return FALSE;
+    }
+
+    $options{pyramid} = ROK4::Core::ProxyPyramid::load($options{pyramid});
+
+    if (! defined $options{pyramid}) {
+        ERROR("Cannot create the Pyramid object (neither raster nor vector)");
         return FALSE;
     }
     
@@ -217,16 +199,11 @@ sub init {
 Function: doIt
 
 Use functions :
-    - <ProxyStorage::remove>
+    - <ROK4::Core::ProxyStorage::remove>
 =cut
 sub doIt {
 
-    my $objPyramid = ROK4::Core::ProxyPyramid::load($options{pyr});
-
-    if (! defined $objPyramid) {
-        ERROR("Cannot create the Pyramid object (neither raster nor vector)");
-        return FALSE;
-    }
+    my $objPyramid = $options{pyramid};
 
     ALWAYS("Pyramid's type : ".ref ($objPyramid));
 
@@ -239,11 +216,10 @@ sub doIt {
         # Dans le cas fichier, on supprime un dossier tout simplement pour les données, pas besoin de fichier list
         INFO("Suppression de la pyramide FICHIER $pyramidName");
 
-
         my $dataDir = $objPyramid->getDataRoot();
 
         INFO("Suppression du dossier de données $dataDir");
-        if (! ProxyStorage::remove("FILE", $dataDir)) {
+        if (! ROK4::Core::ProxyStorage::remove("FILE", $dataDir)) {
             WARN("Impossible de supprimer le dossier $dataDir");
             $issue = TRUE;
             if ($options{stop}) {
@@ -256,7 +232,7 @@ sub doIt {
             # On supprime maintenant le descripteur et la liste
             INFO("Suppression du descripteur de pyramide ".$options{pyr});
             my $descriptorFile = $objPyramid->getDescriptorPath();
-            if (! ProxyStorage::remove("FILE", $descriptorFile)) {
+            if (! ROK4::Core::ProxyStorage::remove("FILE", $descriptorFile)) {
                 WARN("Impossible de supprimer le descripteur de pyramide $descriptorFile");
                 return FALSE;
             }
@@ -264,7 +240,7 @@ sub doIt {
             my $listFile = $objPyramid->getListPath();
             if (-f $listFile) {
                 WARN("Suppression de la liste $listFile");
-                if (! ProxyStorage::remove("FILE", $listFile)) {
+                if (! ROK4::Core::ProxyStorage::remove("FILE", $listFile)) {
                     ERROR("Impossible de supprimer la liste $listFile");
                     return FALSE;
                 }

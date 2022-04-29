@@ -106,7 +106,7 @@ Cet outil convertit un descripteur de pyramide de l'ancien format (XML) vers le 
 
 #### Commande
 
-`convert2json.pl <descriptor path>`
+`convert2json.pl <storage type>://<decriptor path>`
 
 ### SUP-PYR
 
@@ -116,31 +116,25 @@ Stockages gérés : FICHIER, CEPH, S3, SWIFT
 
 #### Commande
 
-`sup-pyr.pl --pyr=path [--full] [--stop] [--help|--usage|--version]`
+`sup-pyr.pl --pyramid=<storage type>://<decriptor path> [--full] [--stop]`
 
 #### Options
 
-* `--help` Affiche le lien vers la documentation utilisateur de l'outil et quitte
-* `--usage` Affiche le lien vers la documentation utilisateur de l'outil et quitte
-* `--version` Affiche la version de l'outil et quitte
-* `--pyr` Précise le chemin vers le descripteur de la pyramide à supprimer. Ce chemin est préfixé par le type de stockage du descripteur : `file://`, `s3://`, `ceph://` ou `swift://`
+* `--pyramid` Précise le chemin vers le descripteur de la pyramide à supprimer. Ce chemin est préfixé par le type de stockage du descripteur : `file://`, `s3://`, `ceph://` ou `swift://`
 * `--full` Précise si on supprime également le fichier liste et le descripteur de la pyramide à la fin
 * `--stop` Précise si on souhaite arrêter la suppression lorsqu'une erreur est rencontrée
 
 ### CREATE-LAYER
 
-Cet outil génère un descripteur de couche pour ROK4SERVER à partir du descripteur de pyramide et du dossier des TileMatrixSets. Il est basique (titre, nom de couche, résumé par défaut) mais fonctionnel. La couche utilisera alors la pyramide en entrée dans sa globalité.
+Cet outil génère un descripteur de couche pour ROK4SERVER à partir du descripteur de pyramide et du dossier des TileMatrixSets. La couche utilisera alors la pyramide en entrée dans sa globalité. Le descripteur de couche est écrit dans la sortie standard.
 
 #### Commandes
 
-* `create-layer.pl --pyramid file:///home/IGN/PYRAMID.pyr [--title "Titre de la couche"] [--abstract "Résumé de la couche"] [--help|--usage|--version]`
+* `create-layer.pl --pyramid=<storage type>://<decriptor path> [--title "Titre de la couche"] [--abstract "Résumé de la couche"]`
 
 #### Options
 
-* `--help` Affiche le lien vers la documentation utilisateur de l'outil et quitte
-* `--usage` Affiche le lien vers la documentation utilisateur de l'outil et quitte
-* `--version` Affiche la version de l'outil et quitte
-* `--pyramid <descriptor path>` Chemin vers le descripteur de la pyramide que la couche doit utiliser. On préfixe selon le stockage
+* `--pyramid` Précise le chemin vers le descripteur de la pyramide que la couche doit utiliser. Ce chemin est préfixé par le type de stockage du descripteur : `file://`, `s3://`, `ceph://` ou `swift://`
 * `--title <string>` Optionnel, titre de la couche
 * `--abstract <string>` Optionnel, résumé de la couche
 
@@ -153,19 +147,17 @@ Stockages gérés pour l'analyse des tuiles : FICHIER, SWIFT
 
 #### Commande
 
-`pyrolyse.pl --pyr=path --json=file [--slabs ALL|DATA|MASK] [--tiles ALL|DATA|MASK] [--perfs=file] [--follow-links]`
+`pyrolyse.pl --pyramid=<storage type>://<decriptor path> --json=file [--slabs ALL|DATA|MASK] [--tiles ALL|DATA|MASK] [--perfs=file] [--follow-links] [--progress]`
 
 #### Options
 
-* `--help` Affiche le lien vers la documentation utilisateur de l'outil et quitte
-* `--usage` Affiche le lien vers la documentation utilisateur de l'outil et quitte
-* `--version` Affiche la version de l'outil et quitte
-* `--pyr` Précise le chemin vers le descripteur de la pyramide à analyser
+* `--pyramid` Précise le chemin vers le descripteur de la pyramide à analyser. Ce chemin est préfixé par le type de stockage du descripteur : `file://`, `s3://`, `ceph://` ou `swift://`
 * `--json` Précise le fichier à écrire en sortie (ne doit pas exister)
 * `--slabs` Précise si l'on veut analyser la taille des dalles
 * `--tiles` Précise si l'on veut analyser la taille des tuiles
 * `--perfs` Définit le fichier dans lequel écrire les temps de lecture des index des dalles (uniquement réalisé si on souhaite l'analyse des tailles des tuiles)
 * `--follow-links` Précise si l'on souhaite traiter les cibles des liens comme des dalles de la pyramide (sinon on compte simplement le nombre de liens)
+* `--progress` Active la barre de progression. Celle ci va sur la sortie des erreurs.
 
 ### TMS-TOOLBOX
 

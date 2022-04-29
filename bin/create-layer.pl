@@ -41,11 +41,6 @@ File: create-layer.pl
 
 Section: CREATE-LAYER tool
 
-Synopsis:
-    (start code)
-    perl create-layer.pl --pyramid=<file> [--title=<string>] [--abstract=<string>]
-    (end code)
-
 Debug tool allowing to write a default layer descriptor to the standard output, from a pyramid descriptor.
 
 CRS' list :
@@ -54,8 +49,6 @@ CRS' list :
     - IGNF:WGS84G
     - EPSG:3857
     - EPSG:4258
-
-(see ROK4GENERATION/layer.png)
 =cut
 
 ################################################################################
@@ -92,21 +85,13 @@ my $VERSION = '@VERSION@';
 =begin nd
 Variable: options
 
-Contains create-layer call options :
-    version - To obtain the command's version
-    help - To obtain the command's help
-    usage - To obtain the command's usage
-    
+Contains create-layer call options :    
     pyramid - To precise the pyramid's descriptor path
     title - To precise the layer's title (optionnal)
     abstract - To precise the layer's abstract (optionnal)
 =cut
 my %options =
 (
-    "version"    => 0,
-    "help"       => 0,
-    "usage"      => 0,
-
 # Mandatory
     "pyramid"  => undef,
 
@@ -114,6 +99,11 @@ my %options =
     "title" => undef,
     "abstract" => undef,
 );
+
+=begin nd
+Variable: help   
+=cut
+my $help = "sup-pyr.pl --pyramid=<storage type>://<decriptor path> [--title=<string>] [--abstract=<string>]";
 
 ################################################################################
 
@@ -133,13 +123,11 @@ sub main {
     
     # initialization
     if (! main::init()) {
-        print STDERR "ERROR INITIALIZATION !\n";
         exit 1;
     }
 
     # execution
     if (! main::doIt()) {
-        print STDERR "ERROR EXECUTION !\n";
         exit 5;
     }
 }
@@ -148,6 +136,9 @@ sub main {
 Function: init
 
 Checks and stores options, initializes the default logger. Checks TMS directory and the pyramid's descriptor file.
+
+Use classes :
+    - <ROK4::Core::ProxyPyramid>
 =cut
 sub init {
 
@@ -166,51 +157,45 @@ sub init {
 
     # init Options
     GetOptions(
-        "help|h" => sub {
-            printf("CREATE-LAYER : version [%s]\n", $VERSION);
-            printf "See documentation here: https://github.com/rok4/rok4\n" ;
-            exit 0;
-        },
-        "version|v" => sub { 
-            printf("CREATE-LAYER : version [%s]\n", $VERSION);
-            exit 0;
-        },
-        "usage" => sub {
-            printf("CREATE-LAYER : version [%s]\n", $VERSION);
-            printf "See documentation here: https://github.com/rok4/rok4\n" ;
-            exit 0;
-        },
-        
+        "version|v" => sub { print "$VERSION\n"; exit 0; },
+        "help|h" => sub { print "$VERSION\n$help\n"; exit 0; },
+
         "pyramid=s" => \$options{pyramid},
         "title=s" => \$options{title},
         "abstract=s" => \$options{abstract}
     ) or do {
-        printf("CREATE-LAYER : version [%s]\n", $VERSION);
-        printf "Unappropriate usage\n";
-        printf "See documentation here: https://github.com/rok4/rok4\n";
+        print STDERR "Unappropriate usage\n";
+        print STDERR "$VERSION\n$help\n";
         exit -1;
     };
-    
+
     # logger by default at runtime
     Log::Log4perl->easy_init({
         level => "ERROR",
         layout => '%5p : %m (%M) %n'
     });
 
-    ############# pyramid
+    ############# PYRAMID
     if (! defined $options{pyramid} || $options{pyramid} eq "") {
-        ERROR("Option 'pyramid' not defined !");
+        print STDERR "Option 'pyramid' not defined !\n";
         return FALSE;
     }
 
-    ############# title
-    if (! defined $options{"title"} || $options{"title"} eq "") {
-        $options{"title"} = File::Basename::basename($options{pyramid}, ".json");
+    $options{pyramid} = ROK4::Core::ProxyPyramid::load($options{pyramid});
+
+    if (! defined $options{pyramid}) {
+        print STDERR "Cannot create the Pyramid object (neither raster nor vector)\n";
+        return FALSE;
     }
 
-    ############# abstract
+    ############# TITLE
+    if (! defined $options{"title"} || $options{"title"} eq "") {
+        $options{"title"} = $options{pyramid}->getName();
+    }
+
+    ############# ABSTRACT
     if (! defined $options{"abstract"} || $options{"abstract"} eq "") {
-        $options{"abstract"} = sprintf "Diffusion de la donnée %s", File::Basename::basename($options{pyramid}, ".pyr");
+        $options{"abstract"} = sprintf "Diffusion de la donnée %s", $options{pyramid}->getName();
     }
 
     return TRUE;
@@ -226,19 +211,11 @@ Function: doIt
 We extract all needed informations from the pyramid's descriptor
 
 Use classes :
-    - <ROK4::Core::ProxyPyramid>
     - <ROK4::Core::TileMatrixSet>
 =cut
 sub doIt {
     
-    my $pyramid = ROK4::Core::ProxyPyramid::load($options{pyramid});
-
-    if (! defined $pyramid) {
-        ERROR("Cannot create the Pyramid object (neither raster nor vector)");
-        return FALSE;
-    }
-
-    INFO("Pyramid's type : ".ref ($pyramid));
+    my $pyramid = $options{pyramid};
 
     my $layer_json_object = {
         title => $options{title},
@@ -310,22 +287,3 @@ END {}
 
 1;
 __END__
-
-=begin nd
-Section: Details
-
-Group: Command's options
-
-    --help - Display the link to the technic documentation.
-
-    --usage - Display the link to the technic documentation.
-
-    --version - Display the tool version.
-
-    --pyramid - Pyramid's descriptor file, defining data used by the layer. Mandatory.
-
-    --resampling - Optionnal, interpolation kernel used by ROK4 to resample images. lanczos_4 by default.
-    
-    --style - Optionnal, style to apply to images. normal by default.
-
-=cut

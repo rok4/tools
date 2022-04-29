@@ -79,10 +79,6 @@ Contains tms-toolbox call options
 =cut
 my %options =
 (
-    "version"    => 0,
-    "help"       => 0,
-    "usage"      => 0,
-
     # Mandatory
     "from" => undef,
     "to" => undef,
@@ -96,6 +92,13 @@ my %options =
     "buffer" => undef,
     "progress" => undef
 );
+
+
+=begin nd
+Variable: help   
+=cut
+my $help = "tms-toolbox.pl --tms <TMS name> [--slabsize <INT>x<INT>] [--storage FILE[:<INT>]|CEPH|S3|SWIFT] [--level <STRING>] [--above <STRING>] [--ratio <INT>] --from <STRING> --to <STRING> [--progress] [--buffer <INT>]";
+
 
 ################################################################################
 
@@ -417,6 +420,8 @@ sub init {
     # init Options
     GetOptions(
         "version|v" => sub { print "$VERSION\n"; exit 0; },
+        "help|h" => sub { print "$VERSION\n$help\n"; exit 0; },
+
         "tms=s" => \$options{tms},
         "slabsize=s" => \$options{slabsize},
         "storage=s" => \$options{storage},
@@ -428,7 +433,8 @@ sub init {
         "buffer=s" => \$options{buffer},
         "progress" => \$options{progress}
     ) or do {
-        printf STDERR "Unappropriate usage\n";
+        print STDERR "Unappropriate usage\n";
+        print STDERR "$VERSION\n$help\n";
         exit -1;
     };
 
@@ -577,7 +583,7 @@ sub init {
         return FALSE;
     }
 
-    if (exists $options{to}->{path} && -e $options{from}->{path}) {
+    if (exists $options{to}->{path} && -e $options{to}->{path}) {
         printf STDERR "Output file %s must not exist\n", $options{to}->{path};
         return FALSE;
     }
@@ -611,7 +617,7 @@ my $conversions = {
                            GEOM                => ["level","slabsize"] },
     SLAB_INDICES_LIST => { GETMAP_PARAMS       => ["level","slabsize"] ,
                            SLAB_PATHS          => ["level","slabsize"] },
-            SLAB_PATH => { GEOM_FILE           => ["level","slabsize"] },
+            SLAB_PATH => { GEOM                => ["level","slabsize"] },
          TILE_INDICE  => { SLAB_INFO           => ["level","slabsize"] ,
                            GETMAP_PARAMS       => ["level"] }
 };
@@ -662,7 +668,7 @@ sub doIt {
             chomp($line);
             $done++;
 
-            if ($options{progress} && \$done >= $options{progress}->{next}) {
+            if ($options{progress} && $done >= $options{progress}->{next}) {
                 $options{progress}->{next} = $options{progress}->{bar}->update($done);
             }
 
@@ -725,7 +731,7 @@ sub doIt {
             chomp($line);
             $done++;
 
-            if ($options{progress} && \$done >= $options{progress}->{next}) {
+            if ($options{progress} && $done >= $options{progress}->{next}) {
                 $options{progress}->{next} = $options{progress}->{bar}->update($done);
             }
 
@@ -789,7 +795,7 @@ sub doIt {
             chomp($line);
             $done++;
 
-            if ($options{progress} && \$done >= $options{progress}->{next}) {
+            if ($options{progress} && $done >= $options{progress}->{next}) {
                 $options{progress}->{next} = $options{progress}->{bar}->update($done);
             }
 
@@ -842,7 +848,7 @@ sub doIt {
         while (my $line = <IN>) {
             chomp($line);
             $done++;
-            if ($options{progress} && \$done >= $options{progress}->{next}) {
+            if ($options{progress} && $done >= $options{progress}->{next}) {
                 $options{progress}->{next} = $options{progress}->{bar}->update($done);
             }
             if ($line eq "#") {last;}
@@ -852,7 +858,7 @@ sub doIt {
             chomp($line);
             $done++;
 
-            if ($options{progress} && \$done >= $options{progress}->{next}) {
+            if ($options{progress} && $done >= $options{progress}->{next}) {
                 $options{progress}->{next} = $options{progress}->{bar}->update($done);
             }
 
@@ -913,7 +919,7 @@ sub doIt {
     }
     
     # ---------------------------------------------------------------------------------------------
-    elsif ($options{from}->{type} eq "SLAB_PATH" && $options{to}->{type} eq "GEOM_FILE") {
+    elsif ($options{from}->{type} eq "SLAB_PATH" && $options{to}->{type} eq "GEOM") {
 
         my ($col,$row);
 
@@ -950,10 +956,7 @@ sub doIt {
             return FALSE;
         }
 
-        if (! ROK4::Core::ProxyGDAL::exportFile($geometry, $options{to}->{path})) {
-            printf STDERR "Cannot write geometry into %s\n", $options{to}->{path};
-            return FALSE;
-        }
+        printf "%s\n", ROK4::Core::ProxyGDAL::getWkt($geometry);
     }
 
     # ---------------------------------------------------------------------------------------------
@@ -977,7 +980,7 @@ sub doIt {
         while (my $line = <IN>) {
             chomp($line);
             $done++;
-            if ($options{progress} && \$done >= $options{progress}->{next}) {
+            if ($options{progress} && $done >= $options{progress}->{next}) {
                 $options{progress}->{next} = $options{progress}->{bar}->update($done);
             }
             if ($line eq "#") {last;}
@@ -987,7 +990,7 @@ sub doIt {
         while (my $line = <IN>) {
             chomp($line);
             $done++;
-            if ($options{progress} && \$done >= $options{progress}->{next}) {
+            if ($options{progress} && $done >= $options{progress}->{next}) {
                 $options{progress}->{next} = $options{progress}->{bar}->update($done);
             }
 
@@ -1072,15 +1075,16 @@ sub doIt {
         }
 
         my @extrema;
-        $options{progress}->{complete} = 0;
+        my $complete = 0;
 
         for (my $i = 0; $i < scalar(@{$bboxes}); $i++) {
             my @ext = $options{"level"}->bboxToIndices(@{$bboxes->[$i]}, $options{"slabsize"}->[0], $options{"slabsize"}->[1]);
-            $options{progress}->{complete} += ( ($ext[1] - $ext[0] + 1)*($ext[3] - $ext[2] + 1) );
+            $complete += ( ($ext[1] - $ext[0] + 1)*($ext[3] - $ext[2] + 1) );
             push(@extrema, \@ext);
         }
 
         if ($options{progress}) {
+            $options{progress}->{complete} = $complete;
             $options{progress}->{bar} = Term::ProgressBar->new({name => 'Writting...', count => $options{progress}->{complete}, fh => \*STDERR});
         }
 
@@ -1116,7 +1120,7 @@ sub doIt {
                         }
                     }
 
-                    if ($options{progress} && \$done >= $options{progress}->{next}) {
+                    if ($options{progress} && $done >= $options{progress}->{next}) {
                         $options{progress}->{next} = $options{progress}->{bar}->update($done);
                     }
 
@@ -1143,15 +1147,16 @@ sub doIt {
         my $bboxes = ROK4::Core::ProxyGDAL::getBboxes($options{from}->{geom});
 
         my @extrema;
-        $options{progress}->{complete} = 0;
+        my $complete = 0;
 
         for (my $i = 0; $i < scalar(@{$bboxes}); $i++) {
             my @ext = $options{"level"}->bboxToIndices(@{$bboxes->[$i]}, $options{"slabsize"}->[0], $options{"slabsize"}->[1]);
-            $options{progress}->{complete} += ( ($ext[1] - $ext[0] + 1)*($ext[3] - $ext[2] + 1) );
+            $complete += ( ($ext[1] - $ext[0] + 1)*($ext[3] - $ext[2] + 1) );
             push(@extrema, \@ext);
         }
 
         if ($options{progress}) {
+            $options{progress}->{complete} = $complete;
             $options{progress}->{bar} = Term::ProgressBar->new({name => 'Counting...', count => $options{progress}->{complete}, fh => \*STDERR});
         }
 
@@ -1176,7 +1181,7 @@ sub doIt {
                         $count++;
                     }
 
-                    if ($options{progress} && \$done >= $options{progress}->{next}) {
+                    if ($options{progress} && $done >= $options{progress}->{next}) {
                         $options{progress}->{next} = $options{progress}->{bar}->update($done);
                     }
                 }
@@ -1206,9 +1211,9 @@ sub doIt {
         }
 
         my ($rowMin, $rowMax, $colMin, $colMax) = $options{"level"}->bboxToIndices(@{$options{from}->{bbox}}, $options{"slabsize"}->[0], $options{"slabsize"}->[1]);
-        $options{progress}->{complete} = ($rowMax - $rowMin + 1)*($colMax - $colMin + 1);
-
+        
         if ($options{progress}) {
+            $options{progress}->{complete} = ($rowMax - $rowMin + 1)*($colMax - $colMin + 1);
             $options{progress}->{bar} = Term::ProgressBar->new({name => 'Slab indices list writting...', count => $options{progress}->{complete}, fh => \*STDERR});
         }
 
@@ -1235,7 +1240,7 @@ sub doIt {
                     printf "TILEMATRIX=%s&TILECOL=$c&TILEROW=$r\n", $options{"level"}->getID();
                 }
 
-                if ($options{progress} && \$done >= $options{progress}->{next}) {
+                if ($options{progress} && $done >= $options{progress}->{next}) {
                     $options{progress}->{next} = $options{progress}->{bar}->update($done);
                 }
 

@@ -10,7 +10,7 @@
 
 ### Commandes
 
-* `tms-toolbox.pl --tms <TMS name> [--slabsize <INT>x<INT>] [--storage FILE[:<INT>]|CEPH|S3|SWIFT] [--level <STRING>] [--above <STRING>] [--ratio <INT>] --from <STRING> --to <STRING> [--progress] [--buffer <INT>] [--version]`
+* `tms-toolbox.pl --tms <TMS name> [--slabsize <INT>x<INT>] [--storage FILE[:<INT>]|CEPH|S3|SWIFT] [--level <STRING>] [--above <STRING>] [--ratio <INT>] --from <STRING> --to <STRING> [--progress] [--buffer <INT>]`
 
 ### Options
 
@@ -74,6 +74,6 @@ Pour les paramètres avec <FILE PATH>, le fichier doit exister si en entrée, et
 | SLAB_INDICE       | GEOM                | level, slabsize      |                      |
 | SLAB_INDICES_LIST | GETMAP_PARAMS       | level, slabsize      | ratio                |
 | SLAB_INDICES_LIST | SLAB_PATHS          | level, slabsize      | above                |
-| SLAB_PATH         | GEOM_FILE           | level, slabsize      | storage              |
+| SLAB_PATH         | GEOM                | level, slabsize      | storage              |
 | TILE_INDICE       | SLAB_INFO           | level, slabsize      | storage              |
-| TILE_INDICE       | GETMAP_PARAMS       | level                |                      |
+| TILE_INDICE       | GETMAP_PARAMS       | level                | buffer               |
