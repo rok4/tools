@@ -2,10 +2,8 @@
 
 Cette suite d'outil facilite la gestion des pyramides (suppression, statistiques), la création de descripteur de couche par défaut, ainsi qu'un outil de conversion basé sur les TMS.
 
-- [Récupération du projet](#récupération-du-projet)
-- [Dépendances à la compilation](#dépendances-à-la-compilation)
-- [Installation](#installation)
-- [Dépendances à l'exécution](#dépendances-à-lexécution)
+- [Installation depuis le paquet debian](#installation-depuis-le-paquet-debian)
+- [Installation depuis les sources](#installation-depuis-les-sources)
 - [Variables d'environnement utilisées dans les librairies ROK4::Core](#variables-denvironnement-utilisées-dans-les-librairies-rok4core)
 - [Présentation des outils](#présentation-des-outils)
   - [CONVERT2JSON](#convert2json)
@@ -21,59 +19,42 @@ Cette suite d'outil facilite la gestion des pyramides (suppression, statistiques
     - [Options](#options-2)
   - [TMS-TOOLBOX](#tms-toolbox)
 
-## Récupération du projet
+## Installation depuis le paquet debian
 
-`git clone --recursive https://github.com/rok4/tools`
+Télécharger les paquets sur GitHub : 
 
-## Dépendances à la compilation
+* [Les librairies Core](https://github.com/rok4/core-perl/releases/)
+* [Les outils](https://github.com/rok4/tools/releases/)
 
-* Submodule GIT
-    * `https://github.com/rok4/core-perl`
-* Paquets debian
-    * perl-base
-    * libgdal-perl
-    * libpq-dev
-    * gdal-bin
-    * libfile-find-rule-perl
-    * libfile-copy-link-perl
-    * libconfig-ini-perl
-    * libdbi-perl
-    * libdbd-pg-perl
-    * libdevel-size-perl
-    * libdigest-sha-perl
-    * libfile-map-perl
-    * libfindbin-libs-perl
-    * libhttp-message-perl
-    * liblwp-protocol-https-perl
-    * libmath-bigint-perl
-    * libterm-progressbar-perl
-    * liblog-log4perl-perl
-    * libjson-parse-perl
-    * libjson-perl
-    * libtest-simple-perl
-    * libxml-libxml-perl
-    * libamazon-s3-perl
+```
+apt install ./librok4-core-perl_<version>_all.deb
+apt install ./rok4-tools_<version>_all.deb
+```
 
-## Installation
+## Installation depuis les sources
 
-```shell
-perl Makefile.PL INSTALL_BASE=/usr/local VERSION=0.0.1
+Dépendances (paquets debian) :
+
+* perl-base
+* [librok4-core-perl](https://github.com/rok4/core-perl/releases/)
+* libfindbin-libs-perl
+* libterm-progressbar-perl
+* liblog-log4perl-perl
+* libjson-parse-perl
+* libjson-perl
+
+```
+perl Makefile.PL INSTALL_BASE=/usr VERSION=0.0.1 PREREQ_FATAL=1
 make
 make injectversion
 make install
 ```
 
-## Dépendances à l'exécution
-
-* Dépôt GIT
-    * `https://github.com/rok4/tilematrixsets`
-
-
 ## Variables d'environnement utilisées dans les librairies ROK4::Core
 
 Leur définition est contrôlée à l'usage.
 
-* `ROK4_TMS_DIRECTORY` pour y chercher les Tile Matrix Sets
+* `ROK4_TMS_DIRECTORY` pour y chercher les Tile Matrix Sets. Ces derniers peuvent être téléchargés sur [GitHub](https://github.com/rok4/tilematrixsets/releases/), installés depuis le paquet debian et seront alors dans le dossier `/etc/rok4/tilematrixsets`.
 * Pour le stockage CEPH
     - `ROK4_CEPH_CONFFILE`
     - `ROK4_CEPH_USERNAME`
