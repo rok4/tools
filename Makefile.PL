@@ -24,7 +24,7 @@ WriteMakefile(
     BUILD_REQUIRES => { 
         "ExtUtils::MakeMaker" => 0
     },
-    # ack --ignore-dir=core -h "^use [A-Z]" ./ | cut -d' ' -f2 | grep -v -E "ROK4" | sed -r "s#;##" | sort | uniq | sed -r "s/(.+)/\"\1\" => 0,/"
+    # ack --ignore-dir=core -h "^use [A-Z]" ./ | cut -d' ' -f2 | sed -r "s#;##" | sort | uniq | sed -r "s/(.+)/\"\1\" => 0,/"
     PREREQ_PM => {
         "Cwd" => 0,
         "Data::Dumper" => 0,
