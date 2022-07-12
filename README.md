@@ -2,23 +2,6 @@
 
 Cette suite d'outil facilite la gestion des pyramides (suppression, statistiques), la création de descripteur de couche par défaut, ainsi qu'un outil de conversion basé sur les TMS.
 
-- [Installation depuis le paquet debian](#installation-depuis-le-paquet-debian)
-- [Installation depuis les sources](#installation-depuis-les-sources)
-- [Variables d'environnement utilisées dans les librairies ROK4::Core](#variables-denvironnement-utilisées-dans-les-librairies-rok4core)
-- [Présentation des outils](#présentation-des-outils)
-  - [CONVERT2JSON](#convert2json)
-    - [Commande](#commande)
-  - [SUP-PYR](#sup-pyr)
-    - [Commande](#commande-1)
-    - [Options](#options)
-  - [CREATE-LAYER](#create-layer)
-    - [Commandes](#commandes)
-    - [Options](#options-1)
-  - [PYROLYSE](#pyrolyse)
-    - [Commande](#commande-2)
-    - [Options](#options-2)
-  - [TMS-TOOLBOX](#tms-toolbox)
-
 ## Installation depuis le paquet debian
 
 Télécharger les paquets sur GitHub : 
@@ -27,8 +10,8 @@ Télécharger les paquets sur GitHub :
 * [Les outils](https://github.com/rok4/tools/releases/)
 
 ```
-apt install ./librok4-core-perl_<version>_all.deb
-apt install ./rok4-tools_<version>_all.deb
+apt install ./librok4-core-perl-<version>-linux-all.deb
+apt install ./rok4-tools-<version>-linux-all.deb
 ```
 
 ## Installation depuis les sources
@@ -146,4 +129,4 @@ Outil : `tms-toolbox.pl`
 
 Ce outil permet de réaliser de nombreuses conversion entre indices de dalles, de tuiles, requêtes getTile ou getMap, liste de fichiers, géométrie WKT... grâce au TMS utilisé (ne nécessite pas de pyramide).
 
-[Détails](./main/tms-toolbox.md)
+[Détails](./bin/tms-toolbox.md)
