@@ -1017,10 +1017,10 @@ sub doIt {
             # Cas objet
             else {
                 # Une ligne du fichier c'est
-                # Cas objet : 0/PYRAMID_IMG_15_15656_5423
-                # On a un nom d'objet de la forme BLA/BLA_BLA_DATATYPE_LEVEL_COL_ROW
-                # DATATYPE vaut MASK ou IMG
-                my @p = split("_",$line);
+                # Cas objet : 0/DATA_15_15656_5423
+                # On a un nom d'objet de la forme BLA/BLA_BLA/DATATYPE_LEVEL_COL_ROW
+                # DATATYPE vaut MASK ou DATA
+                my @p = split(/[_\/]/,$line);
                 my $type = $p[-4];
                 if ($type ne "DATA") { next; }
                 my $level = $p[-3];
